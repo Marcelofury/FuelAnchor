@@ -1,359 +1,85 @@
-# FuelAnchor - Digital Energy Layer for Tokenized Fuel Vouchers
-
-<div align="center">
-  <img src="docs/logo.png" alt="FuelAnchor Logo" width="200" />
-  
-  **Tokenized Fuel Vouchers for East African Logistics**
-  
-  [![Stellar](https://img.shields.io/badge/Stellar-Soroban-7C3AED?style=flat&logo=stellar)](https://stellar.org)
-  [![React Native](https://img.shields.io/badge/React%20Native-Expo-61DAFB?style=flat&logo=react)](https://expo.dev)
-  [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=flat&logo=typescript)](https://typescriptlang.org)
-  [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-</div>
-
----
-
-## 🌍 Problem Statement
-
-East African logistics faces critical challenges:
-
-- **Fuel Fraud**: 15-25% of fleet fuel budgets lost to siphoning and receipts forgery
-- **Financial Exclusion**: 1.5M+ Boda Boda riders in Kenya alone lack access to credit
-- **Cash Dependency**: 70% of transactions in the informal transport sector are cash-based
-- **Credit Invisibility**: No on-chain credit history for micro-fleet operators
-
-## 💡 Solution
-
-FuelAnchor creates a **Digital Energy Layer** using Stellar blockchain to:
-
-1. **Tokenize Fuel Vouchers**: SEP-41 compliant FUEL tokens represent prepaid fuel credits
-2. **Geofenced Redemption**: Smart contracts validate location + spending limits at stations
-3. **Build Credit Scores**: On-chain transaction history enables micro-lending
-4. **Mobile Money Integration**: Seamless on/off ramp via M-Pesa, MTN MoMo, Airtel Money
-
----
-
-## 🏗️ Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    FUELANCHOR ECOSYSTEM                      │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  ┌─────────────┐    ┌──────────────┐    ┌─────────────────┐ │
-│  │   Fleet     │    │    Driver    │    │   Station       │ │
-│  │  Managers   │    │   (Rider)    │    │   Operator      │ │
-│  └──────┬──────┘    └──────┬───────┘    └────────┬────────┘ │
-│         │                  │                      │          │
-│         ▼                  ▼                      ▼          │
-│  ┌─────────────────────────────────────────────────────────┐ │
-│  │              MOBILE APP (React Native/Expo)              │ │
-│  │   • NFC Card Tap  • QR Scan  • USSD Fallback            │ │
-│  └─────────────────────────────────────────────────────────┘ │
-│                            │                                 │
-│                            ▼                                 │
-│  ┌─────────────────────────────────────────────────────────┐ │
-│  │               ANCHOR SERVER (Node.js/Express)            │ │
-│  │   • SEP-24 (Mobile Money)  • SEP-31 (Cross-border)      │ │
-│  │   • Fleet API  • Credit Scoring  • Webhooks             │ │
-│  └─────────────────────────────────────────────────────────┘ │
-│                            │                                 │
-│                            ▼                                 │
-│  ┌─────────────────────────────────────────────────────────┐ │
-│  │             STELLAR / SOROBAN BLOCKCHAIN                 │ │
-│  │                                                          │ │
-│  │   ┌─────────────┐  ┌───────────────┐  ┌──────────────┐  │ │
-│  │   │ FUEL Token  │  │   Voucher     │  │   Credit     │  │ │
-│  │   │  (SEP-41)   │  │  Redemption   │  │   Score      │  │ │
-│  │   └─────────────┘  └───────────────┘  └──────────────┘  │ │
-│  │                                                          │ │
-│  │   ┌─────────────┐                                       │ │
-│  │   │ Geofencing  │                                       │ │
-│  │   │  Corridors  │                                       │ │
-│  │   └─────────────┘                                       │ │
-│  └─────────────────────────────────────────────────────────┘ │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 📁 Project Structure
-
-```
-FuelAnchor/
-├── contracts/                    # Soroban Smart Contracts (Rust)
-│   ├── fuel-token/               # SEP-41 compliant FUEL token
-│   │   ├── src/
-│   │   │   ├── lib.rs            # Module exports
-│   │   │   ├── contract.rs       # Token implementation
-│   │   │   ├── admin.rs          # Admin functions
-│   │   │   ├── balance.rs        # Balance management
-│   │   │   ├── allowance.rs      # Approval system
-│   │   │   ├── metadata.rs       # Token metadata
-│   │   │   ├── storage_types.rs  # Data structures
-│   │   │   └── test.rs           # Unit tests
-│   │   └── Cargo.toml
-│   ├── voucher-redemption/       # Geofenced redemption logic
-│   ├── credit-score/             # On-chain credit scoring
-│   └── geofencing/               # GPS zone validation
-│
-├── backend/                      # Node.js/Express Server
-│   ├── src/
-│   │   ├── index.ts              # Server entry point
-│   │   ├── config/
-│   │   │   └── environment.ts    # Environment configuration
-│   │   ├── api/
-│   │   │   ├── auth.ts           # Authentication routes
-│   │   │   ├── fleet.ts          # Fleet management
-│   │   │   ├── driver.ts         # Driver endpoints
-│   │   │   ├── station.ts        # Station operations
-│   │   │   ├── transaction.ts    # Transaction history
-│   │   │   ├── credit.ts         # Credit score API
-│   │   │   ├── stellar.ts        # Blockchain interactions
-│   │   │   └── webhooks.ts       # Mobile money callbacks
-│   │   ├── middleware/
-│   │   │   ├── auth.ts           # JWT authentication
-│   │   │   └── errorHandler.ts   # Error handling
-│   │   ├── services/
-│   │   │   └── stellar.ts        # Stellar SDK integration
-│   │   └── utils/
-│   │       └── logger.ts         # Winston logging
-│   └── package.json
-│
-├── frontend/                     # React Native Mobile App
-│   ├── src/
-│   │   ├── navigation/
-│   │   │   └── RootNavigator.tsx
-│   │   ├── screens/
-│   │   │   ├── HomeScreen.tsx
-│   │   │   ├── WalletScreen.tsx
-│   │   │   ├── StationsScreen.tsx
-│   │   │   ├── CreditScreen.tsx
-│   │   │   ├── ScanScreen.tsx
-│   │   │   ├── TransferScreen.tsx
-│   │   │   ├── ProfileScreen.tsx
-│   │   │   └── auth/
-│   │   │       ├── LoginScreen.tsx
-│   │   │       └── RegisterScreen.tsx
-│   │   ├── hooks/
-│   │   │   ├── useAuth.tsx
-│   │   │   └── useTheme.tsx
-│   │   └── services/
-│   │       └── api.ts
-│   ├── App.tsx
-│   ├── app.json
-│   └── package.json
-│
-├── docs/                         # Documentation
-├── .env.example                  # Environment template
-├── Cargo.toml                    # Rust workspace config
-└── README.md
-```
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- Node.js 18+
-- Rust 1.70+ with `wasm32-unknown-unknown` target
-- Stellar CLI (for Soroban)
-- Expo CLI
-
-### 1. Clone Repository
-
-```bash
-git clone https://github.com/Marcelofury/FuelAnchor.git
-cd FuelAnchor
-```
-
-### 2. Setup Smart Contracts
-
-```bash
-# Install Rust dependencies
-cargo build
-
-# Build Soroban contracts
-cd contracts/fuel-token && cargo build --target wasm32-unknown-unknown --release
-cd ../voucher-redemption && cargo build --target wasm32-unknown-unknown --release
-cd ../credit-score && cargo build --target wasm32-unknown-unknown --release
-cd ../geofencing && cargo build --target wasm32-unknown-unknown --release
-
-# Deploy to Stellar Testnet
-stellar contract deploy --wasm target/wasm32-unknown-unknown/release/fuel_token.wasm --network testnet
-```
-
-### 3. Setup Backend
-
-```bash
-cd backend
-
-# Install dependencies
-npm install
-
-# Configure environment
-cp ../.env.example .env
-# Edit .env with your values
-
-# Run migrations
-npx prisma migrate dev
-
-# Start server
-npm run dev
-```
-
-### 4. Setup Mobile App
-
-```bash
-cd frontend
-
-# Install dependencies
-npm install
-
-# Start Expo development server
-npx expo start
-
-# Scan QR code with Expo Go app (iOS/Android)
-```
-
----
-
-## 🔑 Key Features
-
-### For Fleet Managers
-- Bulk purchase FUEL tokens via mobile money
-- Distribute fuel budgets to drivers with spending limits
-- Real-time transaction monitoring dashboard
-- Geofence vehicles to approved corridors
-
-### For Drivers (Boda Boda Riders)
-- Tap NFC card or scan QR at stations
-- Build on-chain credit history
-- Access micro-loans based on fuel purchase patterns
-- USSD fallback for feature phones
-
-### For Station Operators
-- Accept digital fuel payments instantly
-- Automatic reconciliation with anchor
-- Fraud prevention with geofencing
-- Lower transaction fees vs. cash
-
----
-
-## 📱 Supported Platforms
-
-| Platform | Support |
-|----------|---------|
-| iOS | ✅ Native via Expo |
-| Android | ✅ Native via Expo |
-| Feature Phones | ✅ USSD (*384*FUEL#) |
-| NFC Cards | ✅ Contactless payments |
-| Web Dashboard | 🚧 Coming Soon |
-
----
-
-## 🌐 Target Markets
-
-| Country | Mobile Money | Currency |
-|---------|-------------|----------|
-| 🇰🇪 Kenya | M-Pesa | KES |
-| 🇺🇬 Uganda | MTN MoMo, Airtel | UGX |
-| 🇹🇿 Tanzania | M-Pesa, Tigo Pesa | TZS |
-| 🇷🇼 Rwanda | MTN MoMo | RWF |
-| 🇧🇮 Burundi | Lumicash | BIF |
-| 🇸🇸 South Sudan | M-Pesa | SSP |
-
----
-
-## 📊 Credit Scoring Model
-
-FuelAnchor builds on-chain credit profiles using 5 factors:
-
-| Factor | Weight | Description |
-|--------|--------|-------------|
-| Account Age | 20% | Time since first transaction |
-| Frequency | 25% | How often fuel is purchased |
-| Consistency | 25% | Regular patterns vs. irregular |
-| Volume | 15% | Total fuel purchased |
-| Diversity | 15% | Number of different stations used |
-
-**Score Tiers:**
-- 🥉 Bronze: 300-499 (Basic discounts)
-- 🥈 Silver: 500-649 (Emergency fuel credit)
-- 🥇 Gold: 650-749 (Micro-loans up to $100)
-- 💎 Platinum: 750-850 (Full credit products)
-
----
-
-## 🛡️ Security Features
-
-- **Multi-sig Admin**: Critical contract operations require multiple signatures
-- **Spending Limits**: Daily, weekly, and per-transaction caps
-- **Geofencing**: GPS validation prevents out-of-zone redemption
-- **Clawback**: Fleet managers can recover tokens from lost NFC cards
-- **PIN Protection**: 6-digit PIN for high-value transactions
-
----
-
-## 🗺️ Roadmap
-
-### Phase 1: MVP (Q1 2025)
-- [x] Soroban smart contracts
-- [x] Mobile app core features
-- [x] M-Pesa integration (Kenya)
-- [ ] Testnet pilot with 10 fleets
-
-### Phase 2: Scale (Q2 2025)
-- [ ] MTN/Airtel integration
-- [ ] Credit scoring launch
-- [ ] 100+ station onboarding
-- [ ] USSD implementation
-
-### Phase 3: Expand (Q3-Q4 2025)
-- [ ] Cross-border payments (SEP-31)
-- [ ] Insurance products
-- [ ] Uganda & Tanzania launch
-- [ ] B2B fuel trading platform
-
----
-
-## 🤝 Contributing
-
-We welcome contributions! Please see [CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines.
-
-```bash
-# Create feature branch
-git checkout -b feature/amazing-feature
-
-# Commit changes
-git commit -m 'Add amazing feature'
-
-# Push to branch
-git push origin feature/amazing-feature
-
-# Open Pull Request
-```
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## 📧 Contact
-
-- **Website**: [fuelanchor.io](https://fuelanchor.io)
-- **Email**: hello@fuelanchor.io
-- **Twitter**: [@FuelAnchor](https://twitter.com/FuelAnchor)
-- **Discord**: [FuelAnchor Community](https://discord.gg/fuelanchor)
-
----
-
-<div align="center">
-  <p>Built with ❤️ for East African logistics</p>
-  <p>Powered by <a href="https://stellar.org">Stellar</a></p>
-</div>
+# FuelAnchor
+
+## Problem Statement
+
+East African logistics and transportation sectors face critical challenges that hamper economic growth and financial inclusion:
+
+**Fuel Fraud and Theft**: Fleet operators lose 15-25% of their fuel budgets to siphoning, receipt forgery, and unauthorized usage. Traditional fuel voucher systems rely on paper receipts that are easily manipulated, creating significant revenue leakage.
+
+**Financial Exclusion**: Over 1.5 million Boda Boda (motorcycle taxi) riders in Kenya alone lack access to formal credit services. Without verifiable transaction histories or collateral, these micro-entrepreneurs cannot access loans to grow their businesses or manage cash flow during emergencies.
+
+**Cash Dependency**: Approximately 70% of transactions in the informal transport sector are cash-based, creating security risks, inefficiencies, and lack of transparency. Cash transactions prevent the creation of auditable financial records needed for credit assessment.
+
+**Invisible Credit History**: Micro-fleet operators and individual riders have no on-chain or verifiable transaction history, making it impossible for financial institutions to assess creditworthiness and extend appropriate financial products.
+
+## Solution
+
+FuelAnchor creates a blockchain-based digital fuel voucher system that transforms fuel distribution, payment, and credit access across East Africa.
+
+**Tokenized Fuel Vouchers**: FuelAnchor issues SEP-41 compliant FUEL tokens on the Stellar blockchain, where each token represents a prepaid fuel credit. Fleet managers purchase these tokens via mobile money integration, then distribute them to drivers with granular spending controls.
+
+**Geofenced Redemption**: Smart contracts validate both location and spending limits when drivers redeem fuel at participating stations. GPS geofencing ensures fuel can only be purchased within approved corridors or at authorized stations, eliminating fraud and unauthorized usage.
+
+**On-Chain Credit Building**: Every fuel purchase creates an immutable transaction record on the Stellar blockchain. The system analyzes transaction patterns including frequency, consistency, volume, and account age to generate credit scores that enable micro-lending to previously unbankable populations.
+
+**Mobile Money Integration**: Seamless on-ramp and off-ramp through M-Pesa, MTN MoMo, Airtel Money, and other regional mobile money providers. Users can convert local currency to FUEL tokens instantly without needing cryptocurrency knowledge.
+
+**Multi-Platform Access**: React Native mobile app for smartphones, NFC card tapping for quick transactions, QR code scanning, and USSD fallback for feature phones, ensuring accessibility across all device types and economic segments.
+
+## Market Target
+
+**Primary Markets**: Kenya, Uganda, Tanzania, Rwanda, Burundi, and South Sudan represent the initial target markets, with expansion planned across the East African Community.
+
+**Fleet Operators**: Transport companies managing 5-500 vehicles, logistics companies with regional distribution networks, and delivery services requiring fuel budget management and fraud prevention.
+
+**Boda Boda Riders**: 1.5+ million motorcycle taxi riders in Kenya alone, representing a massive market of micro-entrepreneurs who need fuel purchasing efficiency and access to credit for vehicle maintenance, insurance, or emergencies.
+
+**Fuel Station Networks**: Independent and chain fuel stations seeking to reduce cash handling, attract digital customers, and participate in the growing digital economy with lower transaction costs than traditional payment processors.
+
+**Micro-Lenders and Financial Institutions**: Banks, MFIs, and fintech companies seeking verifiable credit data to serve the informal transport sector with loans, insurance, and other financial products.
+
+## Business Impact and Revenue Model
+
+**Transaction Fees**: FuelAnchor charges a 1-2% transaction fee on every fuel voucher purchase and redemption, generating revenue from the high-frequency, high-volume fuel transaction flow across the platform.
+
+**SaaS Subscriptions for Fleet Management**: Fleet operators pay monthly subscription fees ($50-500 depending on fleet size) for access to the dashboard, analytics, geofencing controls, and advanced features like automated budget distribution and reconciliation.
+
+**Credit Scoring API**: Financial institutions pay per-query fees to access credit scores and transaction histories, enabling them to make lending decisions based on verified on-chain data. This B2B revenue stream grows as the user base expands.
+
+**Foreign Exchange Spread**: Small spreads on currency conversion when users deposit mobile money or withdraw funds, capitalizing on the anchor's role in facilitating cross-border settlements using Stellar's efficient payment rails.
+
+**Premium Financial Products**: Commission-based revenue from facilitating micro-loans, insurance products, and savings accounts to users with established credit histories, partnering with regulated financial institutions for distribution.
+
+**Market Impact**: By reducing fuel fraud by up to 25%, FuelAnchor saves fleet operators significant capital that can be reinvested in fleet expansion. Providing credit access to 1.5M+ riders unlocks economic opportunity and drives GDP growth in the informal transport sector. The digitization of fuel transactions creates transparent, auditable records that reduce corruption and improve tax collection efficiency.
+
+## How FuelAnchor Uses Stellar
+
+**Smart Contracts on Soroban**: FuelAnchor deploys four core smart contracts on Stellar's Soroban platform written in Rust: the FUEL token contract (SEP-41 compliant), voucher redemption contract with geofencing logic, credit score contract for on-chain reputation, and geofencing contract for GPS validation.
+
+**SEP-24 Mobile Money Bridge**: Implementation of SEP-24 (hosted deposit and withdrawal) enables seamless integration with East African mobile money platforms. Users deposit KES, UGX, or TZS via M-Pesa or MTN MoMo, and the anchor mints equivalent FUEL tokens on Stellar.
+
+**SEP-31 Cross-Border Payments**: For regional fleet operators managing vehicles across multiple countries, SEP-31 (cross-border payments) enables instant, low-cost settlement in local currencies without traditional correspondent banking delays.
+
+**Low Transaction Costs**: Stellar's sub-cent transaction fees ($0.00001 per operation) make micro-transactions economically viable, unlike Ethereum or Bitcoin where gas fees would make small fuel purchases prohibitively expensive.
+
+**3-5 Second Settlement**: Stellar's consensus mechanism provides near-instant finality, allowing drivers to receive tokens and redeem fuel in real-time without waiting for block confirmations that would create friction at fuel stations.
+
+**Built-in DEX**: Stellar's decentralized exchange enables automatic market-making for FUEL tokens against XLM and other assets, providing liquidity and price stability without relying on centralized exchanges.
+
+**Compliance and Regulation**: Stellar's design philosophy emphasizing regulatory compliance, combined with built-in KYC/AML tools through SEP-12, positions FuelAnchor to work within existing financial regulations across East African jurisdictions.
+
+## Why This Is Important
+
+**Financial Inclusion at Scale**: FuelAnchor provides 1.5+ million unbanked or underbanked transport workers with their first access to formal credit, creating pathways out of poverty and enabling economic mobility through verifiable financial history.
+
+**Fraud Prevention**: Eliminating 15-25% revenue leakage from fuel fraud strengthens fleet operator profitability, reduces consumer fuel prices through efficiency gains, and creates a more transparent, trustworthy fuel distribution system.
+
+**Economic Transparency**: Blockchain-based transaction records create auditable trails that reduce corruption, improve tax collection, and provide governments with accurate economic data to inform policy decisions in the critical transport and logistics sectors.
+
+**Regional Integration**: By operating across six East African countries with cross-border payment capabilities, FuelAnchor facilitates regional trade and economic integration, reducing friction in the movement of goods and services across the EAC.
+
+**Technological Leapfrogging**: East Africa, having leapfrogged traditional banking with mobile money adoption, is positioned to leapfrog traditional payment infrastructure with blockchain-based systems. FuelAnchor demonstrates how emerging markets can lead in financial innovation.
+
+**Climate and Efficiency**: Digital fuel distribution reduces paper waste from traditional voucher systems, while transaction data enables fleet optimization insights that can reduce fuel consumption and emissions through better route planning and driver behavior analysis.
+
+**Catalyst for Broader Adoption**: Success in the fuel voucher use case demonstrates blockchain's practical utility beyond speculation, creating a template for tokenizing other essential commodities like electricity, agriculture inputs, or healthcare services in emerging markets.
