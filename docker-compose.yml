@@ -1,0 +1,90 @@
+# FuelAnchor Docker Compose
+# Development environment setup
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: fuelanchor-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: fuelanchor
+      POSTGRES_PASSWORD: fuelanchor_dev_password
+      POSTGRES_DB: fuelanchor
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fuelanchor"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: fuelanchor-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API Server
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fuelanchor-api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DATABASE_URL: postgresql://fuelanchor:fuelanchor_dev_password@postgres:5432/fuelanchor
+      REDIS_URL: redis://redis:6379
+      STELLAR_NETWORK: TESTNET
+      STELLAR_HORIZON_URL: https://horizon-testnet.stellar.org
+      STELLAR_SOROBAN_RPC_URL: https://soroban-testnet.stellar.org
+      JWT_SECRET: dev-jwt-secret-change-in-production
+      JWT_EXPIRES_IN: 7d
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend/src:/app/src:ro
+      - ./backend/logs:/app/logs
+
+  # Adminer (Database Management)
+  adminer:
+    image: adminer:4
+    container_name: fuelanchor-adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  default:
+    name: fuelanchor-network
+    driver: bridge
