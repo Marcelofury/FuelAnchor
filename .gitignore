@@ -91,3 +91,6 @@ secrets/
 
 # Documentation build
 docs/_build/
+/push_TO_GITHUB.txt
+/quick_git_push.txt
+/cleanup_summary.txt
