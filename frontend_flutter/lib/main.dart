@@ -25,10 +25,9 @@ class FuelAnchorApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        colorScheme: ColorScheme.dark(
+        colorScheme: const ColorScheme.dark(
           primary: AppColors.electricGreen,
           secondary: AppColors.electricGreen,
-          background: AppColors.navy,
           surface: AppColors.darkNavy,
         ),
         textTheme: GoogleFonts.interTextTheme(
