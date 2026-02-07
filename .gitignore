@@ -52,8 +52,28 @@ coverage/
 *.tsbuildinfo
 
 # Rust
-Cargo.lock
 **/*.rs.bk
+
+# Flutter/Dart
+**/pubspec.lock
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+**/generated_plugin_registrant.dart
+**/*.g.dart
+**/*.freezed.dart
+**/ios/Flutter/.last_build_id
+**/ios/Pods/
+**/ios/.symlinks/
+**/android/.gradle/
+**/android/captures/
+**/android/gradlew
+**/android/gradlew.bat
+**/android/local.properties
+**/android/**/GeneratedPluginRegistrant.java
+**/android/key.properties
+**/.flutter-plugins-dependencies
 
 # Temporary files
 *.tmp
