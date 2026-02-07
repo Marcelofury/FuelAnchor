@@ -1,103 +1,470 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_strings.dart';
 import '../../../auth/providers/providers.dart';
-import '../../../wallet/providers/wallet_providers.dart';
 
-class MerchantDashboardScreen extends ConsumerWidget {
+class MerchantDashboardScreen extends ConsumerStatefulWidget {
   const MerchantDashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MerchantDashboardScreen> createState() => _MerchantDashboardScreenState();
+}
+
+class _MerchantDashboardScreenState extends ConsumerState<MerchantDashboardScreen> {
+  int _selectedNavIndex = 0;
+  bool _isRefreshing = false;
+
+  @override
+  Widget build(BuildContext context) {
     final publicKeyAsync = ref.watch(userPublicKeyProvider);
-    final balanceAsync = ref.watch(walletBalanceNotifierProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Merchant Dashboard'),
-        backgroundColor: AppColors.darkNavy,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () {
-              ref.read(userRoleNotifierProvider.notifier).clearRole();
-              context.go('/login');
-            },
-          ),
-        ],
-      ),
+      backgroundColor: const Color(0xFFF5F5F5),
       body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () async {
-            await ref.read(walletBalanceNotifierProvider.notifier).refresh();
-            await ref.read(userPublicKeyProvider.notifier).refresh();
-          },
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Earnings Card
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppColors.electricGreen.withOpacity(0.2),
-                        AppColors.darkNavy,
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: AppColors.electricGreen.withOpacity(0.3),
+        child: Column(
+          children: [
+            // Header
+            Container(
+              padding: EdgeInsets.all(16),
+              color: Colors.white,
+              child: Row(
+                children: [
+                  Icon(Icons.local_gas_station, color: Colors.blue[700], size: 28),
+                  SizedBox(width: 12),
+                  Text(
+                    'FuelAnchor',
+                    style: TextStyle(
+                      color: AppColors.navy,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
                     ),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.account_balance_wallet,
+                  SizedBox(width: 12),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.electricGreen.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
                             color: AppColors.electricGreen,
-                            size: 32,
+                            shape: BoxShape.circle,
                           ),
-                          const SizedBox(width: 12),
+                        ),
+                        SizedBox(width: 6),
+                        Text(
+                          'BLOCKCHAIN LIVE',
+                          style: TextStyle(
+                            color: AppColors.electricGreen,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Spacer(),
+                  IconButton(
+                    icon: Icon(Icons.refresh, size: 24),
+                    onPressed: () async {
+                      setState(() => _isRefreshing = true);
+                      await Future.delayed(Duration(seconds: 1));
+                      setState(() => _isRefreshing = false);
+                    },
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    // Pump QR Card
+                    Container(
+                      padding: EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        children: [
                           Text(
-                            'Total Earnings',
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                  color: AppColors.slate,
+                            'Pump #1',
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.navy,
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Shell Kampala - Central District',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 14,
+                            ),
+                          ),
+                          SizedBox(height: 24),
+                          // QR Code
+                          Container(
+                            padding: EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.blue[200]!, width: 3),
+                            ),
+                            child: publicKeyAsync.when(
+                              data: (publicKey) => QrImageView(
+                                data: publicKey ?? 'STATION_ID_12345',
+                                version: QrVersions.auto,
+                                size: 200.0,
+                                backgroundColor: Colors.white,
+                              ),
+                              loading: () => Container(
+                                width: 200,
+                                height: 200,
+                                child: Center(child: CircularProgressIndicator()),
+                              ),
+                              error: (_, __) => Container(
+                                width: 200,
+                                height: 200,
+                                child: Center(child: Icon(Icons.error)),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 24),
+                          Text(
+                            'SCAN TO INITIATE FUELING',
+                            style: TextStyle(
+                              color: Colors.blue[700],
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          SizedBox(height: 20),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () {},
+                              icon: Icon(Icons.share),
+                              label: Text('Share Station ID'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue[700],
+                                foregroundColor: Colors.white,
+                                padding: EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
+                              ),
+                            ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
-                      balanceAsync.when(
-                        data: (balance) => Text(
-                          balance != null ? '${balance.balance} FUEL' : '0 FUEL',
-                          style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                                color: AppColors.electricGreen,
-                                fontWeight: FontWeight.bold,
+                    ),
+                    SizedBox(height: 24),
+                    // Live Activity Section
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Live Activity',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.navy,
+                          ),
+                        ),
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.blue[50],
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              if (_isRefreshing)
+                                SizedBox(
+                                  width: 12,
+                                  height: 12,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.blue[700],
+                                  ),
+                                ),
+                              if (!_isRefreshing)
+                                Icon(Icons.refresh, size: 14, color: Colors.blue[700]),
+                              SizedBox(width: 6),
+                              Text(
+                                _isRefreshing ? 'REFRESHING...' : 'REFRESHING...',
+                                style: TextStyle(
+                                  color: Colors.blue[700],
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
+                            ],
+                          ),
                         ),
-                        loading: () => const CircularProgressIndicator(
-                          color: AppColors.electricGreen,
-                        ),
-                        error: (error, _) => const Text(
-                          'Error loading balance',
-                          style: TextStyle(color: AppColors.error),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
+                    SizedBox(height: 16),
+                    // Activity Items
+                    _ActivityTile(
+                      vehicleId: 'UBA 123X',
+                      time: 'Today, 10:45 AM',
+                      amount: '50,000 UGX',
+                      status: ActivityStatus.verified,
+                      icon: Icons.directions_car,
+                    ),
+                    SizedBox(height: 12),
+                    _ActivityTile(
+                      vehicleId: 'UBD 456Y',
+                      time: 'Today, 10:30 AM',
+                      amount: '120,000 UGX',
+                      status: ActivityStatus.waiting,
+                      icon: Icons.local_shipping,
+                    ),
+                    SizedBox(height: 12),
+                    _ActivityTile(
+                      vehicleId: 'UAZ 789Q',
+                      time: 'Today, 10:15 AM',
+                      amount: '35,500 UGX',
+                      status: ActivityStatus.completed,
+                      icon: Icons.local_taxi,
+                    ),
+                    SizedBox(height: 12),
+                    _ActivityTile(
+                      vehicleId: 'UEB 221M',
+                      time: 'Today, 10:05 AM',
+                      amount: '12,000 UGX',
+                      status: ActivityStatus.verified,
+                      icon: Icons.motorcycle,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedNavIndex,
+        onTap: (index) => setState(() => _selectedNavIndex = index),
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: Colors.blue[700],
+        unselectedItemColor: Colors.grey,
+        items: [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.local_gas_station),
+            label: 'ACTIVITY',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.qr_code_scanner),
+            label: 'SCAN',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.receipt),
+            label: 'SETTLEMENT',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'PROFILE',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+enum ActivityStatus {
+  verified,
+  waiting,
+  completed,
+}
+
+class _ActivityTile extends StatelessWidget {
+  final String vehicleId;
+  final String time;
+  final String amount;
+  final ActivityStatus status;
+  final IconData icon;
+
+  const _ActivityTile({
+    required this.vehicleId,
+    required this.time,
+    required this.amount,
+    required this.status,
+    required this.icon,
+  });
+
+  Color get _getBackgroundColor {
+    switch (status) {
+      case ActivityStatus.verified:
+        return Colors.blue[50]!;
+      case ActivityStatus.waiting:
+        return Colors.orange[50]!;
+      case ActivityStatus.completed:
+        return Colors.green[50]!;
+    }
+  }
+
+  Color get _getIconColor {
+    switch (status) {
+      case ActivityStatus.verified:
+        return Colors.blue[700]!;
+      case ActivityStatus.waiting:
+        return Colors.orange[700]!;
+      case ActivityStatus.completed:
+        return Colors.green[700]!;
+    }
+  }
+
+  Widget get _getStatusBadge {
+    switch (status) {
+      case ActivityStatus.verified:
+        return Container(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.blue[700],
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'VERIFIED',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(width: 4),
+              Icon(Icons.verified, color: Colors.white, size: 14),
+            ],
+          ),
+        );
+      case ActivityStatus.waiting:
+        return Container(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.orange,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'WAITING',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(width: 4),
+              SizedBox(
+                width: 12,
+                height: 12,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        );
+      case ActivityStatus.completed:
+        return Container(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppColors.electricGreen,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'COMPLETED',
+                style: TextStyle(
+                  color: AppColors.navy,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(width: 4),
+              Icon(Icons.check_circle, color: AppColors.navy, size: 14),
+            ],
+          ),
+        );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _getBackgroundColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: _getIconColor, size: 28),
+          ),
+          SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Vehicle ID: $vehicleId',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.navy,
                   ),
                 ),
-                const SizedBox(height: 32),
+                SizedBox(height: 4),
+                Text(
+                  time,
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 13,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  amount,
+                  style: TextStyle(
+                    color: Colors.blue[700],
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _getStatusBadge,
+        ],
+      ),
+    );
+  }
+}
 
                 // QR Code Section
                 Text(

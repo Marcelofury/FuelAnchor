@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_strings.dart';
 import '../../../../core/enums/user_role.dart';
 import '../../providers/providers.dart';
 
@@ -14,17 +13,9 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  UserRole? _selectedRole;
   bool _isLoading = false;
 
-  Future<void> _handleLogin() async {
-    if (_selectedRole == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a role')),
-      );
-      return;
-    }
-
+  Future<void> _handleLogin(UserRole role) async {
     setState(() => _isLoading = true);
 
     try {
@@ -35,7 +26,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       
       await keypairResult.fold(
         (failure) async {
-          // No keypair found, generate new one
           final generateResult = await stellarService.generateAndStoreKeypair();
           await generateResult.fold(
             (error) {
@@ -45,23 +35,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               );
             },
             (keyPair) async {
-              // Fund the account on testnet
               await stellarService.fundTestnetAccount();
             },
           );
         },
-        (keyPair) async {
-          // Keypair exists, continue
-        },
+        (keyPair) async {},
       );
 
       if (!mounted) return;
 
-      // Set the user role
-      ref.read(userRoleNotifierProvider.notifier).setRole(_selectedRole!);
+      ref.read(userRoleNotifierProvider.notifier).setRole(role);
 
-      // Navigate to appropriate dashboard
-      switch (_selectedRole!) {
+      switch (role) {
         case UserRole.rider:
           context.go('/rider-dashboard');
           break;
@@ -82,94 +67,171 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F5F5),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // App Logo/Title
-              Text(
-                AppStrings.appName,
-                style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                      color: AppColors.electricGreen,
-                      fontWeight: FontWeight.bold,
+              const SizedBox(height: 60),
+              // Logo
+              Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  color: AppColors.electricGreen,
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: Icon(
+                  Icons.anchor,
+                  size: 60,
+                  color: AppColors.navy,
+                ),
+              ),
+              const SizedBox(height: 24),
+              // App Name
+              RichText(
+                text: TextSpan(
+                  style: TextStyle(
+                    fontSize: 36,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.navy,
+                  ),
+                  children: [
+                    TextSpan(text: 'Fuel '),
+                    TextSpan(
+                      text: 'Anchor',
+                      style: TextStyle(color: AppColors.electricGreen),
                     ),
-                textAlign: TextAlign.center,
+                  ],
+                ),
               ),
               const SizedBox(height: 8),
               Text(
-                'Fuel Payments on Stellar',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppColors.slate,
-                    ),
-                textAlign: TextAlign.center,
+                'BLOCKCHAIN FUEL MANAGEMENT',
+                style: TextStyle(
+                  fontSize: 12,
+                  letterSpacing: 1.5,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-              const SizedBox(height: 64),
-
-              // Role Selection Title
+              const SizedBox(height: 60),
+              // Welcome Text
               Text(
-                AppStrings.selectRole,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: AppColors.lightSlate,
-                      fontWeight: FontWeight.w600,
+                'Welcome back',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.navy,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Select your access portal to continue',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
+              ),
+              const SizedBox(height: 40),
+              // Driver Access Card
+              _AccessCard(
+                title: 'Driver Access',
+                subtitle: 'Fuel up and manage trips',
+                icon: Icons.local_shipping,
+                onTap: _isLoading ? null : () => _handleLogin(UserRole.fleetDriver),
+              ),
+              const SizedBox(height: 16),
+              // Merchant Access Card
+              _AccessCard(
+                title: 'Merchant Access',
+                subtitle: 'Manage sales and inventory',
+                icon: Icons.store,
+                onTap: _isLoading ? null : () => _handleLogin(UserRole.merchant),
+              ),
+              const Spacer(),
+              // Biometric Login
+              Column(
+                children: [
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white,
+                      border: Border.all(color: Colors.grey[300]!, width: 2),
                     ),
-                textAlign: TextAlign.center,
+                    child: Icon(
+                      Icons.fingerprint,
+                      size: 48,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'BIOMETRIC LOGIN',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.navy,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              // Verified Badge
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(25),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.verified, size: 20, color: AppColors.navy),
+                    SizedBox(width: 8),
+                    Text(
+                      'VERIFIED BY STELLAR',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.navy,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 32),
-
-              // Role Cards
-              _RoleCard(
-                role: UserRole.rider,
-                isSelected: _selectedRole == UserRole.rider,
-                onTap: () => setState(() => _selectedRole = UserRole.rider),
-                icon: Icons.pedal_bike,
-              ),
-              const SizedBox(height: 16),
-              _RoleCard(
-                role: UserRole.fleetDriver,
-                isSelected: _selectedRole == UserRole.fleetDriver,
-                onTap: () => setState(() => _selectedRole = UserRole.fleetDriver),
-                icon: Icons.local_shipping,
-              ),
-              const SizedBox(height: 16),
-              _RoleCard(
-                role: UserRole.merchant,
-                isSelected: _selectedRole == UserRole.merchant,
-                onTap: () => setState(() => _selectedRole = UserRole.merchant),
-                icon: Icons.store,
-              ),
-              const SizedBox(height: 48),
-
-              // Login Button
-              ElevatedButton(
-                onPressed: _isLoading ? null : _handleLogin,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.electricGreen,
-                  foregroundColor: AppColors.navy,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              // Footer Links
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'HELP CENTER',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
+                    ),
                   ),
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.navy,
-                        ),
-                      )
-                    : const Text(
-                        AppStrings.login,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                  SizedBox(width: 40),
+                  Text(
+                    'ENGLISH (US)',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
               ),
+              const SizedBox(height: 24),
             ],
           ),
         ),
@@ -178,56 +240,66 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 }
 
-class _RoleCard extends StatelessWidget {
-  final UserRole role;
-  final bool isSelected;
-  final VoidCallback onTap;
+class _AccessCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
   final IconData icon;
+  final VoidCallback? onTap;
 
-  const _RoleCard({
-    required this.role,
-    required this.isSelected,
-    required this.onTap,
+  const _AccessCard({
+    required this.title,
+    required this.subtitle,
     required this.icon,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.lightNavy : AppColors.darkNavy,
-          border: Border.all(
-            color: isSelected ? AppColors.electricGreen : AppColors.slate.withOpacity(0.2),
-            width: 2,
-          ),
-          borderRadius: BorderRadius.circular(12),
+          color: AppColors.electricGreen,
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
           children: [
             Icon(
               icon,
-              size: 32,
-              color: isSelected ? AppColors.electricGreen : AppColors.slate,
+              size: 40,
+              color: AppColors.navy,
             ),
-            const SizedBox(width: 16),
-            Text(
-              role.displayName,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: isSelected ? AppColors.electricGreen : AppColors.lightSlate,
+            const SizedBox(width: 20),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.navy,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.navy.withOpacity(0.8),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const Spacer(),
-            if (isSelected)
-              const Icon(
-                Icons.check_circle,
-                color: AppColors.electricGreen,
-              ),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 24,
+              color: AppColors.navy,
+            ),
           ],
         ),
       ),
