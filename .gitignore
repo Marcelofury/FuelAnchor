@@ -91,6 +91,12 @@ secrets/
 
 # Documentation build
 docs/_build/
+
+# other docs
 /push_TO_GITHUB.txt
 /quick_git_push.txt
 /cleanup_summary.txt
+/start_here.md
+/git_commands.txt
+/cleanup_summary.md
+
