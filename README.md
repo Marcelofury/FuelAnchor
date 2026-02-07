@@ -1,5 +1,102 @@
 # FuelAnchor
 
+A blockchain-based digital fuel voucher system for East Africa, built with Flutter and Stellar/Soroban.
+
+## Overview
+
+FuelAnchor is a comprehensive fuel payment and management platform that leverages the Stellar blockchain and Soroban smart contracts to provide secure, transparent, and efficient fuel distribution for fleet operators, individual riders, and fuel merchants across East Africa.
+
+## Technology Stack
+
+- **Mobile App**: Flutter 3.0+ (Cross-platform iOS/Android)
+- **Blockchain**: Stellar Network with Soroban Smart Contracts (Rust)
+- **State Management**: Riverpod with code generation
+- **Backend**: Node.js/TypeScript (API services)
+- **Storage**: Flutter Secure Storage for keypair management
+
+## Project Structure
+
+```
+FuelAnchor/
+├── frontend_flutter/       # Flutter mobile application
+├── contracts/             # Soroban smart contracts (Rust)
+│   ├── fuel-lock/        # Main fuel payment contract
+│   ├── credit-score/     # Credit scoring contract
+│   ├── fuel-token/       # FUEL token contract (SEP-41)
+│   ├── geofencing/       # GPS validation contract
+│   └── voucher-redemption/ # Voucher redemption logic
+├── backend/              # Node.js backend services
+└── docs/                 # Documentation
+```
+
+## Quick Start
+
+### Prerequisites
+
+- Flutter SDK 3.0 or higher
+- Rust and Soroban CLI (for smart contracts)
+- Node.js 18+ (for backend services)
+
+### Flutter App Setup
+
+```bash
+cd frontend_flutter
+flutter pub get
+flutter pub run build_runner build --delete-conflicting-outputs
+flutter run
+```
+
+### Smart Contract Setup
+
+```bash
+cd contracts/fuel-lock
+soroban contract build
+soroban contract deploy --wasm target/wasm32-unknown-unknown/release/fuel_lock.wasm --network testnet
+```
+
+For detailed setup instructions, see [SETUP_GUIDE.md](SETUP_GUIDE.md).
+
+## Features
+
+### For Riders
+- Scan QR codes to pay for fuel
+- View wallet balance and transaction history
+- GPS-verified payments
+- Secure Stellar keypair management
+
+### For Fleet Drivers
+- Track fuel quota allocation
+- Update odometer readings
+- Monitor fuel usage and efficiency
+- Real-time quota balance
+
+### For Merchants (Fuel Stations)
+- Generate payment QR codes
+- View earnings and transactions
+- Accept FUEL token payments
+- Real-time settlement
+
+## Architecture
+
+The application follows a feature-first clean architecture pattern with clear separation of concerns:
+
+- **Presentation Layer**: Flutter UI components and screens
+- **Domain Layer**: Business logic and entities
+- **Data Layer**: Stellar/Soroban integration and repositories
+
+For detailed architecture documentation, see [ARCHITECTURE.md](ARCHITECTURE.md).
+
+## Smart Contracts
+
+FuelAnchor deploys multiple Soroban smart contracts:
+
+1. **FuelLock Contract**: Manages fuel quotas and payment processing
+2. **Credit Score Contract**: Builds on-chain credit history
+3. **FUEL Token Contract**: SEP-41 compliant token implementation
+4. **Geofencing Contract**: GPS validation for payments
+
+Contract documentation available in [contracts/README.md](contracts/fuel-lock/README.md).
+
 ## Problem Statement
 
 East African logistics and transportation sectors face critical challenges that hamper economic growth and financial inclusion:
@@ -24,7 +121,7 @@ FuelAnchor creates a blockchain-based digital fuel voucher system that transform
 
 **Mobile Money Integration**: Seamless on-ramp and off-ramp through M-Pesa, MTN MoMo, Airtel Money, and other regional mobile money providers. Users can convert local currency to FUEL tokens instantly without needing cryptocurrency knowledge.
 
-**Multi-Platform Access**: React Native mobile app for smartphones, NFC card tapping for quick transactions, QR code scanning, and USSD fallback for feature phones, ensuring accessibility across all device types and economic segments.
+**Multi-Platform Access**: Flutter mobile app for iOS and Android smartphones, with support for QR code scanning and GPS verification. Future plans include NFC card tapping for quick transactions and USSD fallback for feature phones, ensuring accessibility across all device types and economic segments.
 
 ## Market Target
 
@@ -83,3 +180,54 @@ FuelAnchor creates a blockchain-based digital fuel voucher system that transform
 **Climate and Efficiency**: Digital fuel distribution reduces paper waste from traditional voucher systems, while transaction data enables fleet optimization insights that can reduce fuel consumption and emissions through better route planning and driver behavior analysis.
 
 **Catalyst for Broader Adoption**: Success in the fuel voucher use case demonstrates blockchain's practical utility beyond speculation, creating a template for tokenizing other essential commodities like electricity, agriculture inputs, or healthcare services in emerging markets.
+## Documentation
+
+- [Setup Guide](SETUP_GUIDE.md) - Complete installation and deployment instructions
+- [Architecture](ARCHITECTURE.md) - System architecture and data flows
+- [Project Summary](PROJECT_SUMMARY.md) - Detailed project overview
+- [Commands Reference](COMMANDS.md) - Quick command reference
+- [Flutter App Documentation](frontend_flutter/README.md) - Mobile app details
+- [Smart Contract Documentation](contracts/fuel-lock/README.md) - Contract API reference
+
+## Development
+
+### Running the Flutter App
+
+```bash
+cd frontend_flutter
+flutter pub get
+flutter pub run build_runner build --delete-conflicting-outputs
+flutter run
+```
+
+### Building Smart Contracts
+
+```bash
+cd contracts/fuel-lock
+soroban contract build
+cargo test
+```
+
+### Backend Services
+
+```bash
+cd backend
+npm install
+npm run dev
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests and linters
+5. Submit a pull request
+
+## License
+
+See [LICENSE](LICENSE) file for details.
+
+## Contact
+
+For questions, support, or partnership inquiries, please open an issue or contact the development team.
