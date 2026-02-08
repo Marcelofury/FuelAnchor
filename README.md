@@ -224,10 +224,3 @@ npm run dev
 4. Run tests and linters
 5. Submit a pull request
 
-## License
-
-See [LICENSE](LICENSE) file for details.
-
-## Contact
-
-For questions, support, or partnership inquiries, please open an issue or contact the development team.
