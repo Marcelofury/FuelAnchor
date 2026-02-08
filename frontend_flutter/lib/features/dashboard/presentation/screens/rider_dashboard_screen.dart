@@ -4,6 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/utils/responsive.dart';
 import '../../../auth/providers/providers.dart';
 import '../../../wallet/providers/wallet_providers.dart';
 import '../../../payment/providers/payment_providers.dart';
@@ -18,7 +19,7 @@ class RiderDashboardScreen extends ConsumerStatefulWidget {
 
 class _RiderDashboardScreenState extends ConsumerState<RiderDashboardScreen> {
   bool _isScanning = false;
-  int _selectedNavIndex = 0;
+  final int _selectedNavIndex = 0;
 
   void _onQRCodeDetected(BarcodeCapture capture) async {
     final String? merchantId = capture.barcodes.first.rawValue;
@@ -110,7 +111,7 @@ class _RiderDashboardScreenState extends ConsumerState<RiderDashboardScreen> {
       data: (hash) {
         if (hash != null) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Payment successful!')),
+            const SnackBar(content: Text('Payment successful!')),
           );
           ref.read(walletBalanceNotifierProvider.notifier).refresh();
         }
@@ -133,10 +134,10 @@ class _RiderDashboardScreenState extends ConsumerState<RiderDashboardScreen> {
         appBar: AppBar(
           backgroundColor: AppColors.navy,
           leading: IconButton(
-            icon: Icon(Icons.arrow_back),
+            icon: const Icon(Icons.arrow_back),
             onPressed: () => setState(() => _isScanning = false),
           ),
-          title: Text('Scan QR Code'),
+          title: const Text('Scan QR Code'),
         ),
         body: MobileScanner(onDetect: _onQRCodeDetected),
       );
@@ -149,20 +150,20 @@ class _RiderDashboardScreenState extends ConsumerState<RiderDashboardScreen> {
           children: [
             // Header
             Container(
-              padding: EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
               color: AppColors.navy,
               child: Row(
                 children: [
                   Container(
-                    padding: EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: AppColors.electricGreen,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(Icons.anchor, color: AppColors.navy, size: 24),
+                    child: const Icon(Icons.anchor, color: AppColors.navy, size: 24),
                   ),
-                  SizedBox(width: 12),
-                  Column(
+                  const SizedBox(width: 12),
+                  const Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
@@ -184,12 +185,12 @@ class _RiderDashboardScreenState extends ConsumerState<RiderDashboardScreen> {
                       ),
                     ],
                   ),
-                  Spacer(),
+                  const Spacer(),
                   IconButton(
-                    icon: Icon(Icons.notifications_outlined, color: Colors.white),
+                    icon: const Icon(Icons.notifications_outlined, color: Colors.white),
                     onPressed: () {},
                   ),
-                  CircleAvatar(
+                  const CircleAvatar(
                     radius: 20,
                     backgroundColor: AppColors.slate,
                     child: Icon(Icons.person, color: Colors.white),
@@ -203,7 +204,7 @@ class _RiderDashboardScreenState extends ConsumerState<RiderDashboardScreen> {
                   await ref.read(walletBalanceNotifierProvider.notifier).refresh();
                 },
                 child: SingleChildScrollView(
-                  padding: EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -216,10 +217,10 @@ class _RiderDashboardScreenState extends ConsumerState<RiderDashboardScreen> {
                           letterSpacing: 1,
                         ),
                       ),
-                      SizedBox(height: 20),
+                      const SizedBox(height: 20),
                       // Credit Card
                       Container(
-                        padding: EdgeInsets.all(20),
+                        padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
                           color: AppColors.navy,
                           borderRadius: BorderRadius.circular(20),
@@ -240,13 +241,13 @@ class _RiderDashboardScreenState extends ConsumerState<RiderDashboardScreen> {
                                   ),
                                 ),
                                 Container(
-                                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                   decoration: BoxDecoration(
                                     color: AppColors.electricGreen.withOpacity(0.2),
                                     borderRadius: BorderRadius.circular(20),
                                     border: Border.all(color: AppColors.electricGreen),
                                   ),
-                                  child: Row(
+                                  child: const Row(
                                     children: [
                                       Icon(Icons.verified, size: 14, color: AppColors.electricGreen),
                                       SizedBox(width: 4),
@@ -264,23 +265,23 @@ class _RiderDashboardScreenState extends ConsumerState<RiderDashboardScreen> {
                                 ),
                               ],
                             ),
-                            SizedBox(height: 12),
+                            const SizedBox(height: 12),
                             balanceAsync.when(
                               data: (balance) => Text(
                                 'UGX ${balance?.balance ?? '0'}',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 36,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              loading: () => CircularProgressIndicator(color: AppColors.electricGreen),
-                              error: (_, __) => Text(
+                              loading: () => const CircularProgressIndicator(color: AppColors.electricGreen),
+                              error: (_, __) => const Text(
                                 'UGX 0',
                                 style: TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold),
                               ),
                             ),
-                            SizedBox(height: 12),
+                            const SizedBox(height: 12),
                             // Progress Bar
                             Column(
                               children: [
@@ -290,10 +291,10 @@ class _RiderDashboardScreenState extends ConsumerState<RiderDashboardScreen> {
                                     value: 0.75,
                                     minHeight: 8,
                                     backgroundColor: Colors.grey[800],
-                                    valueColor: AlwaysStoppedAnimation(AppColors.electricGreen),
+                                    valueColor: const AlwaysStoppedAnimation(AppColors.electricGreen),
                                   ),
                                 ),
-                                SizedBox(height: 8),
+                                const SizedBox(height: 8),
                                 Align(
                                   alignment: Alignment.centerRight,
                                   child: Text(
@@ -306,35 +307,35 @@ class _RiderDashboardScreenState extends ConsumerState<RiderDashboardScreen> {
                                 ),
                               ],
                             ),
-                            SizedBox(height: 16),
+                            const SizedBox(height: 16),
                             Row(
                               children: [
                                 Expanded(
                                   child: ElevatedButton.icon(
                                     onPressed: () {},
-                                    icon: Icon(Icons.add_circle, size: 20),
-                                    label: Text(
+                                    icon: const Icon(Icons.add_circle, size: 20),
+                                    label: const Text(
                                       'Top Up Balance',
                                       style: TextStyle(fontWeight: FontWeight.bold),
                                     ),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: AppColors.electricGreen,
                                       foregroundColor: AppColors.navy,
-                                      padding: EdgeInsets.symmetric(vertical: 14),
+                                      padding: const EdgeInsets.symmetric(vertical: 14),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                     ),
                                   ),
                                 ),
-                                SizedBox(width: 12),
+                                const SizedBox(width: 12),
                                 Container(
                                   decoration: BoxDecoration(
                                     color: Colors.grey[800],
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: IconButton(
-                                    icon: Icon(Icons.visibility_outlined, color: Colors.white),
+                                    icon: const Icon(Icons.visibility_outlined, color: Colors.white),
                                     onPressed: () {},
                                   ),
                                 ),
@@ -343,13 +344,13 @@ class _RiderDashboardScreenState extends ConsumerState<RiderDashboardScreen> {
                           ],
                         ),
                       ),
-                      SizedBox(height: 20),
+                      const SizedBox(height: 20),
                       // Stats Row
                       Row(
                         children: [
                           Expanded(
                             child: Container(
-                              padding: EdgeInsets.all(16),
+                              padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(12),
@@ -360,7 +361,7 @@ class _RiderDashboardScreenState extends ConsumerState<RiderDashboardScreen> {
                                   Row(
                                     children: [
                                       Icon(Icons.local_gas_station, color: Colors.grey[600], size: 20),
-                                      SizedBox(width: 8),
+                                      const SizedBox(width: 8),
                                       Text(
                                         'FUEL USAGE',
                                         style: TextStyle(
@@ -371,11 +372,11 @@ class _RiderDashboardScreenState extends ConsumerState<RiderDashboardScreen> {
                                       ),
                                     ],
                                   ),
-                                  SizedBox(height: 8),
+                                  const SizedBox(height: 8),
                                   Row(
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
-                                      Text(
+                                      const Text(
                                         '12.7L',
                                         style: TextStyle(
                                           color: AppColors.navy,
@@ -383,9 +384,9 @@ class _RiderDashboardScreenState extends ConsumerState<RiderDashboardScreen> {
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                      SizedBox(width: 4),
+                                      const SizedBox(width: 4),
                                       Padding(
-                                        padding: EdgeInsets.only(bottom: 4),
+                                        padding: const EdgeInsets.only(bottom: 4),
                                         child: Text(
                                           '/ week',
                                           style: TextStyle(
@@ -400,10 +401,10 @@ class _RiderDashboardScreenState extends ConsumerState<RiderDashboardScreen> {
                               ),
                             ),
                           ),
-                          SizedBox(width: 16),
+                          const SizedBox(width: 16),
                           Expanded(
                             child: Container(
-                              padding: EdgeInsets.all(16),
+                              padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(12),
@@ -414,7 +415,7 @@ class _RiderDashboardScreenState extends ConsumerState<RiderDashboardScreen> {
                                   Row(
                                     children: [
                                       Icon(Icons.stars, color: Colors.grey[600], size: 20),
-                                      SizedBox(width: 8),
+                                      const SizedBox(width: 8),
                                       Text(
                                         'REWARDS',
                                         style: TextStyle(
@@ -425,8 +426,8 @@ class _RiderDashboardScreenState extends ConsumerState<RiderDashboardScreen> {
                                       ),
                                     ],
                                   ),
-                                  SizedBox(height: 8),
-                                  Row(
+                                  const SizedBox(height: 8),
+                                  const Row(
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
                                       Text(
@@ -457,12 +458,12 @@ class _RiderDashboardScreenState extends ConsumerState<RiderDashboardScreen> {
                           ),
                         ],
                       ),
-                      SizedBox(height: 24),
+                      const SizedBox(height: 24),
                       // Recent Fuelings
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
+                          const Text(
                             'Recent Fuelings',
                             style: TextStyle(
                               fontSize: 20,
@@ -472,7 +473,7 @@ class _RiderDashboardScreenState extends ConsumerState<RiderDashboardScreen> {
                           ),
                           TextButton(
                             onPressed: () {},
-                            child: Text(
+                            child: const Text(
                               'VIEW HISTORY',
                               style: TextStyle(
                                 color: Colors.blue,
@@ -483,23 +484,23 @@ class _RiderDashboardScreenState extends ConsumerState<RiderDashboardScreen> {
                           ),
                         ],
                       ),
-                      SizedBox(height: 12),
-                      _FuelingTile(
+                      const SizedBox(height: 12),
+                      const _FuelingTile(
                         stationName: 'Shell Kasubi',
                         date: 'Oct 12',
                         time: '10:30 AM',
                         liters: '4.5L',
                         amount: '-22,500 UGX',
                       ),
-                      SizedBox(height: 12),
-                      _FuelingTile(
+                      const SizedBox(height: 12),
+                      const _FuelingTile(
                         stationName: 'TotalEnergies Mengo',
                         date: 'Oct 10',
                         time: '04:15 PM',
                         liters: '3.2L',
                         amount: '-16,000 UGX',
                       ),
-                      SizedBox(height: 100),
+                      const SizedBox(height: 100),
                     ],
                   ),
                 ),
@@ -508,14 +509,14 @@ class _RiderDashboardScreenState extends ConsumerState<RiderDashboardScreen> {
           ],
         ),
       ),
-      floatingActionButton: Container(
+      floatingActionButton: SizedBox(
         width: MediaQuery.of(context).size.width - 120,
         child: FloatingActionButton.extended(
           onPressed: () => setState(() => _isScanning = true),
           backgroundColor: AppColors.electricGreen,
           foregroundColor: AppColors.navy,
-          icon: Icon(Icons.qr_code_scanner, size: 28),
-          label: Text(
+          icon: const Icon(Icons.qr_code_scanner, size: 28),
+          label: const Text(
             'SCAN TO PUMP',
             style: TextStyle(
               fontSize: 16,
@@ -528,13 +529,27 @@ class _RiderDashboardScreenState extends ConsumerState<RiderDashboardScreen> {
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedNavIndex,
-        onTap: (index) => setState(() => _selectedNavIndex = index),
+        onTap: (index) {
+          if (index == 0) {
+            // Already on home
+            return;
+          } else if (index == 1) {
+            // Navigate to History
+            context.push('/history');
+          } else if (index == 2) {
+            // Navigate to Nearby Stations
+            context.push('/nearby-stations');
+          } else if (index == 3) {
+            // Navigate to Profile
+            context.push('/profile');
+          }
+        },
         type: BottomNavigationBarType.fixed,
         selectedItemColor: AppColors.navy,
         unselectedItemColor: Colors.grey,
         showSelectedLabels: true,
         showUnselectedLabels: true,
-        items: [
+        items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
             label: 'HOME',
@@ -575,7 +590,7 @@ class _FuelingTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -583,27 +598,27 @@ class _FuelingTile extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            padding: EdgeInsets.all(12),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Colors.grey[100],
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(Icons.local_gas_station, color: AppColors.navy),
+            child: const Icon(Icons.local_gas_station, color: AppColors.navy),
           ),
-          SizedBox(width: 16),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   stationName,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: AppColors.navy,
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
                   '$date • $time',
                   style: TextStyle(
@@ -619,13 +634,13 @@ class _FuelingTile extends StatelessWidget {
             children: [
               Text(
                 liters,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: AppColors.navy,
                 ),
               ),
-              SizedBox(height: 4),
+              const SizedBox(height: 4),
               Text(
                 amount,
                 style: TextStyle(
