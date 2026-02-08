@@ -1,4 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import '../../../core/error/failure.dart';
 import '../../auth/providers/providers.dart';
 
 part 'payment_providers.g.dart';
@@ -28,7 +29,7 @@ class PaymentNotifier extends _$PaymentNotifier {
       );
       
       return result.fold(
-        (failure) => throw Exception(failure.message),
+        (Failure failure) => throw Exception(failure.message),
         (transactionHash) => transactionHash,
       );
     });
