@@ -21,23 +21,23 @@ class _FleetManagerTowerScreenState extends ConsumerState<FleetManagerTowerScree
           children: [
             // Header
             Container(
-              padding: EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
               color: Colors.white,
               child: Row(
                 children: [
                   Container(
-                    padding: EdgeInsets.all(10),
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: AppColors.navy,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(Icons.anchor, color: AppColors.electricGreen, size: 28),
+                    child: const Icon(Icons.anchor, color: AppColors.electricGreen, size: 28),
                   ),
-                  SizedBox(width: 12),
+                  const SizedBox(width: 12),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         'Control Tower',
                         style: TextStyle(
                           color: AppColors.navy,
@@ -55,11 +55,11 @@ class _FleetManagerTowerScreenState extends ConsumerState<FleetManagerTowerScree
                       ),
                     ],
                   ),
-                  Spacer(),
+                  const Spacer(),
                   Stack(
                     children: [
                       IconButton(
-                        icon: Icon(Icons.notifications_outlined, size: 28),
+                        icon: const Icon(Icons.notifications_outlined, size: 28),
                         onPressed: () {},
                       ),
                       Positioned(
@@ -68,7 +68,7 @@ class _FleetManagerTowerScreenState extends ConsumerState<FleetManagerTowerScree
                         child: Container(
                           width: 8,
                           height: 8,
-                          decoration: BoxDecoration(
+                          decoration: const BoxDecoration(
                             color: AppColors.electricGreen,
                             shape: BoxShape.circle,
                           ),
@@ -86,7 +86,7 @@ class _FleetManagerTowerScreenState extends ConsumerState<FleetManagerTowerScree
             ),
             Expanded(
               child: SingleChildScrollView(
-                padding: EdgeInsets.all(20),
+                padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -96,12 +96,12 @@ class _FleetManagerTowerScreenState extends ConsumerState<FleetManagerTowerScree
                         Expanded(
                           flex: 2,
                           child: Container(
-                            padding: EdgeInsets.all(20),
+                            padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
                               color: AppColors.navy,
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Column(
+                            child: const Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
@@ -146,10 +146,10 @@ class _FleetManagerTowerScreenState extends ConsumerState<FleetManagerTowerScree
                             ),
                           ),
                         ),
-                        SizedBox(width: 16),
+                        const SizedBox(width: 16),
                         Expanded(
                           child: Container(
-                            padding: EdgeInsets.all(20),
+                            padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(12),
@@ -165,10 +165,10 @@ class _FleetManagerTowerScreenState extends ConsumerState<FleetManagerTowerScree
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                SizedBox(height: 12),
+                                const SizedBox(height: 12),
                                 Row(
                                   children: [
-                                    Text(
+                                    const Text(
                                       '42',
                                       style: TextStyle(
                                         color: AppColors.navy,
@@ -176,7 +176,7 @@ class _FleetManagerTowerScreenState extends ConsumerState<FleetManagerTowerScree
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                    SizedBox(width: 8),
+                                    const SizedBox(width: 8),
                                     Column(
                                       children: [
                                         Container(
@@ -187,7 +187,7 @@ class _FleetManagerTowerScreenState extends ConsumerState<FleetManagerTowerScree
                                             borderRadius: BorderRadius.circular(8),
                                           ),
                                         ),
-                                        SizedBox(height: 4),
+                                        const SizedBox(height: 4),
                                         Container(
                                           width: 32,
                                           height: 16,
@@ -200,7 +200,7 @@ class _FleetManagerTowerScreenState extends ConsumerState<FleetManagerTowerScree
                                     ),
                                   ],
                                 ),
-                                SizedBox(height: 6),
+                                const SizedBox(height: 6),
                                 Text(
                                   '95% fleet utilization',
                                   style: TextStyle(
@@ -214,7 +214,7 @@ class _FleetManagerTowerScreenState extends ConsumerState<FleetManagerTowerScree
                         ),
                       ],
                     ),
-                    SizedBox(height: 20),
+                    const SizedBox(height: 20),
                     // Map View
                     Container(
                       height: 300,
@@ -238,12 +238,12 @@ class _FleetManagerTowerScreenState extends ConsumerState<FleetManagerTowerScree
                               top: 16,
                               left: 16,
                               child: Container(
-                                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(20),
                                 ),
-                                child: Row(
+                                child: const Row(
                                   children: [
                                     Icon(Icons.location_pin, color: Colors.red, size: 16),
                                     SizedBox(width: 6),
@@ -264,7 +264,7 @@ class _FleetManagerTowerScreenState extends ConsumerState<FleetManagerTowerScree
                               top: 120,
                               left: 140,
                               child: Container(
-                                padding: EdgeInsets.all(12),
+                                padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
                                   color: AppColors.electricGreen,
                                   shape: BoxShape.circle,
@@ -276,7 +276,7 @@ class _FleetManagerTowerScreenState extends ConsumerState<FleetManagerTowerScree
                                     ),
                                   ],
                                 ),
-                                child: Icon(Icons.local_shipping, color: AppColors.navy, size: 20),
+                                child: const Icon(Icons.local_shipping, color: AppColors.navy, size: 20),
                               ),
                             ),
                             // Vehicle label
@@ -284,12 +284,12 @@ class _FleetManagerTowerScreenState extends ConsumerState<FleetManagerTowerScree
                               top: 100,
                               left: 100,
                               child: Container(
-                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(4),
                                 ),
-                                child: Text(
+                                child: const Text(
                                   'KCA 123X',
                                   style: TextStyle(
                                     fontSize: 10,
@@ -309,14 +309,14 @@ class _FleetManagerTowerScreenState extends ConsumerState<FleetManagerTowerScree
                                     mini: true,
                                     backgroundColor: AppColors.electricGreen,
                                     onPressed: () {},
-                                    child: Icon(Icons.add, color: AppColors.navy),
+                                    child: const Icon(Icons.add, color: AppColors.navy),
                                   ),
-                                  SizedBox(height: 8),
+                                  const SizedBox(height: 8),
                                   FloatingActionButton(
                                     mini: true,
                                     backgroundColor: Colors.white,
                                     onPressed: () {},
-                                    child: Icon(Icons.remove, color: AppColors.navy),
+                                    child: const Icon(Icons.remove, color: AppColors.navy),
                                   ),
                                 ],
                               ),
@@ -325,12 +325,12 @@ class _FleetManagerTowerScreenState extends ConsumerState<FleetManagerTowerScree
                         ),
                       ),
                     ),
-                    SizedBox(height: 24),
+                    const SizedBox(height: 24),
                     // Fleet Status Section
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
+                        const Text(
                           'Fleet Status',
                           style: TextStyle(
                             fontSize: 22,
@@ -355,29 +355,29 @@ class _FleetManagerTowerScreenState extends ConsumerState<FleetManagerTowerScree
                         ),
                       ],
                     ),
-                    SizedBox(height: 12),
+                    const SizedBox(height: 12),
                     // Vehicle Status Cards
-                    _VehicleStatusCard(
+                    const _VehicleStatusCard(
                       plateNumber: 'KCA 123X - Scania G410',
                       fuelLevel: 0.65,
                       fuelPercent: '65%',
                       isLow: false,
                     ),
-                    SizedBox(height: 12),
-                    _VehicleStatusCard(
+                    const SizedBox(height: 12),
+                    const _VehicleStatusCard(
                       plateNumber: 'KDA 456Y - Mercedes Actros',
                       fuelLevel: 0.22,
                       fuelPercent: '22%',
                       isLow: true,
                     ),
-                    SizedBox(height: 12),
-                    _VehicleStatusCard(
+                    const SizedBox(height: 12),
+                    const _VehicleStatusCard(
                       plateNumber: 'KCB 789Z - Scania P360',
                       fuelLevel: 0.88,
                       fuelPercent: '88%',
                       isLow: false,
                     ),
-                    SizedBox(height: 80),
+                    const SizedBox(height: 80),
                   ],
                 ),
               ),
@@ -388,7 +388,7 @@ class _FleetManagerTowerScreenState extends ConsumerState<FleetManagerTowerScree
       floatingActionButton: FloatingActionButton(
         onPressed: () {},
         backgroundColor: AppColors.electricGreen,
-        child: Icon(Icons.add, color: AppColors.navy, size: 32),
+        child: const Icon(Icons.add, color: AppColors.navy, size: 32),
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedNavIndex,
@@ -396,7 +396,7 @@ class _FleetManagerTowerScreenState extends ConsumerState<FleetManagerTowerScree
         type: BottomNavigationBarType.fixed,
         selectedItemColor: AppColors.electricGreen,
         unselectedItemColor: Colors.grey[600],
-        items: [
+        items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard),
             label: 'Tower',
@@ -435,7 +435,7 @@ class _VehicleStatusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -443,27 +443,27 @@ class _VehicleStatusCard extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            padding: EdgeInsets.all(12),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Colors.grey[100],
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(Icons.local_shipping, color: AppColors.navy, size: 28),
+            child: const Icon(Icons.local_shipping, color: AppColors.navy, size: 28),
           ),
-          SizedBox(width: 16),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   plateNumber,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: AppColors.navy,
                   ),
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 Row(
                   children: [
                     Expanded(
@@ -477,7 +477,7 @@ class _VehicleStatusCard extends StatelessWidget {
                               fontSize: 12,
                             ),
                           ),
-                          SizedBox(height: 4),
+                          const SizedBox(height: 4),
                           Stack(
                             children: [
                               Container(
@@ -502,7 +502,7 @@ class _VehicleStatusCard extends StatelessWidget {
                         ],
                       ),
                     ),
-                    SizedBox(width: 12),
+                    const SizedBox(width: 12),
                     Text(
                       fuelPercent,
                       style: TextStyle(
@@ -516,18 +516,18 @@ class _VehicleStatusCard extends StatelessWidget {
               ],
             ),
           ),
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
           ElevatedButton(
             onPressed: () {},
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.electricGreen,
               foregroundColor: AppColors.navy,
-              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
-            child: Text(
+            child: const Text(
               'Top Up',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
