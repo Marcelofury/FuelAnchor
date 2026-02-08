@@ -23,7 +23,7 @@ class MerchantVerificationScreen extends StatelessWidget {
       backgroundColor: AppColors.navy,
       body: SafeArea(
         child: Padding(
-          padding: EdgeInsets.all(40),
+          padding: const EdgeInsets.all(40),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -36,7 +36,7 @@ class MerchantVerificationScreen extends StatelessWidget {
                   color: Colors.transparent,
                   border: Border.all(color: AppColors.electricGreen, width: 6),
                 ),
-                child: Center(
+                child: const Center(
                   child: Icon(
                     Icons.check,
                     size: 80,
@@ -44,9 +44,9 @@ class MerchantVerificationScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              SizedBox(height: 40),
+              const SizedBox(height: 40),
               // Payment Confirmed Text
-              Text(
+              const Text(
                 'Payment Confirmed',
                 style: TextStyle(
                   color: Colors.white,
@@ -55,20 +55,20 @@ class MerchantVerificationScreen extends StatelessWidget {
                 ),
                 textAlign: TextAlign.center,
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               // Amount
               Text(
                 amount,
-                style: TextStyle(
+                style: const TextStyle(
                   color: AppColors.electricGreen,
                   fontSize: 48,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              SizedBox(height: 48),
+              const SizedBox(height: 48),
               // Transaction Details Card
               Container(
-                padding: EdgeInsets.all(24),
+                padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   color: AppColors.navy.withOpacity(0.5),
                   borderRadius: BorderRadius.circular(16),
@@ -77,14 +77,14 @@ class MerchantVerificationScreen extends StatelessWidget {
                 child: Column(
                   children: [
                     _DetailRow(label: 'Customer', value: customer),
-                    SizedBox(height: 16),
+                    const SizedBox(height: 16),
                     _DetailRow(label: 'Product', value: product),
-                    SizedBox(height: 16),
+                    const SizedBox(height: 16),
                     _DetailRow(label: 'Volume', value: volume),
                   ],
                 ),
               ),
-              Spacer(),
+              const Spacer(),
               // Next Transaction Button
               SizedBox(
                 width: double.infinity,
@@ -95,12 +95,12 @@ class MerchantVerificationScreen extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.electricGreen,
                     foregroundColor: AppColors.navy,
-                    padding: EdgeInsets.symmetric(vertical: 18),
+                    padding: const EdgeInsets.symmetric(vertical: 18),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: Text(
+                  child: const Text(
                     'Next Transaction',
                     style: TextStyle(
                       fontSize: 20,
@@ -109,7 +109,7 @@ class MerchantVerificationScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               // Blockchain Hash Link
               GestureDetector(
                 onTap: () {
@@ -118,11 +118,11 @@ class MerchantVerificationScreen extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.link, color: AppColors.electricGreen, size: 18),
-                    SizedBox(width: 8),
+                    const Icon(Icons.link, color: AppColors.electricGreen, size: 18),
+                    const SizedBox(width: 8),
                     Text(
                       'View Blockchain Hash: $transactionHash',
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: AppColors.electricGreen,
                         fontSize: 13,
                         decoration: TextDecoration.underline,
@@ -163,7 +163,7 @@ class _DetailRow extends StatelessWidget {
         ),
         Text(
           value,
-          style: TextStyle(
+          style: const TextStyle(
             color: Colors.white,
             fontSize: 16,
             fontWeight: FontWeight.w600,
