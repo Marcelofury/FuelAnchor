@@ -2,21 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 
-class WelcomeScreen extends StatefulWidget {
+class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
-
-  @override
-  State<WelcomeScreen> createState() => _WelcomeScreenState();
-}
-
-class _WelcomeScreenState extends State<WelcomeScreen> {
-  bool _isDarkMode = false;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -29,10 +22,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         ),
         child: SafeArea(
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             child: Column(
               children: [
-                Spacer(flex: 2),
+                const Spacer(flex: 2),
                 // Card Illustration
                 Container(
                   width: 320,
@@ -45,12 +38,12 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                         color: Colors.black.withOpacity(0.08),
                         blurRadius: 40,
                         spreadRadius: 0,
-                        offset: Offset(0, 20),
+                        offset: const Offset(0, 20),
                       ),
                     ],
                   ),
                   child: Padding(
-                    padding: EdgeInsets.all(24),
+                    padding: const EdgeInsets.all(24),
                     child: Column(
                       children: [
                         // QR/Card Display Area
@@ -58,7 +51,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                           height: 180,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(20),
-                            gradient: LinearGradient(
+                            gradient: const LinearGradient(
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                               colors: [
@@ -81,7 +74,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                             ),
                           ),
                         ),
-                        SizedBox(height: 32),
+                        const SizedBox(height: 32),
                         // Green Indicator Dot
                         Container(
                           width: 24,
@@ -98,7 +91,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                             ],
                           ),
                         ),
-                        Spacer(),
+                        const Spacer(),
                         // Anchor Logo
                         Container(
                           width: 100,
@@ -117,18 +110,18 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                     Container(
                                       width: 12,
                                       height: 12,
-                                      decoration: BoxDecoration(
+                                      decoration: const BoxDecoration(
                                         color: Colors.white,
                                         shape: BoxShape.circle,
                                       ),
                                     ),
-                                    SizedBox(height: 4),
+                                    const SizedBox(height: 4),
                                     Container(
                                       width: 4,
                                       height: 32,
                                       color: Colors.white,
                                     ),
-                                    SizedBox(height: 4),
+                                    const SizedBox(height: 4),
                                     // Anchor bottom curves
                                     Row(
                                       mainAxisSize: MainAxisSize.min,
@@ -136,7 +129,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                         Container(
                                           width: 20,
                                           height: 20,
-                                          decoration: BoxDecoration(
+                                          decoration: const BoxDecoration(
                                             border: Border(
                                               left: BorderSide(color: Colors.white, width: 4),
                                               bottom: BorderSide(color: Colors.white, width: 4),
@@ -146,11 +139,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                             ),
                                           ),
                                         ),
-                                        SizedBox(width: 8),
+                                        const SizedBox(width: 8),
                                         Container(
                                           width: 20,
                                           height: 20,
-                                          decoration: BoxDecoration(
+                                          decoration: const BoxDecoration(
                                             border: Border(
                                               right: BorderSide(color: Colors.white, width: 4),
                                               bottom: BorderSide(color: Colors.white, width: 4),
@@ -168,9 +161,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                             ],
                           ),
                         ),
-                        SizedBox(height: 24),
+                        const SizedBox(height: 24),
                         // FuelAnchor Text
-                        Text(
+                        const Text(
                           'FUELANCHOR',
                           style: TextStyle(
                             fontSize: 22,
@@ -179,35 +172,12 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                             letterSpacing: 2,
                           ),
                         ),
-                        SizedBox(height: 24),
+                        const SizedBox(height: 24),
                       ],
                     ),
                   ),
                 ),
-                Spacer(flex: 1),
-                // Main Heading
-                Text(
-                  'Secure Energy\nManagement',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 42,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.electricGreen,
-                    height: 1.2,
-                  ),
-                ),
-                SizedBox(height: 16),
-                // Subtitle
-                Text(
-                  'The blockchain-powered standard for\nmodern fuel distribution',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: Color(0xFF7CD4C4),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                Spacer(flex: 2),
+                const Spacer(flex: 3),
                 // Enter Platform Button
                 SizedBox(
                   width: double.infinity,
@@ -218,13 +188,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.electricGreen,
                       foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(vertical: 20),
+                      padding: const EdgeInsets.symmetric(vertical: 20),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
                       elevation: 0,
                     ),
-                    child: Row(
+                    child: const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
@@ -241,100 +211,12 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     ),
                   ),
                 ),
-                SizedBox(height: 32),
-                // Status Row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Network Status
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'NETWORK STATUS',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey[500],
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: AppColors.electricGreen,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            SizedBox(width: 6),
-                            Text(
-                              'Operational',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: AppColors.electricGreen,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    SizedBox(width: 60),
-                    // Protocol
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'PROTOCOL',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey[500],
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          'v4.2-Stable',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Color(0xFF7CD4C4),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                SizedBox(height: 20),
+                const SizedBox(height: 40),
               ],
             ),
           ),
         ),
       ),
-      floatingActionButton: Padding(
-        padding: EdgeInsets.only(bottom: 20),
-        child: FloatingActionButton(
-          mini: true,
-          backgroundColor: Colors.white,
-          elevation: 2,
-          onPressed: () {
-            setState(() {
-              _isDarkMode = !_isDarkMode;
-            });
-          },
-          child: Icon(
-            _isDarkMode ? Icons.light_mode : Icons.dark_mode,
-            color: AppColors.navy,
-            size: 20,
-          ),
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 }
