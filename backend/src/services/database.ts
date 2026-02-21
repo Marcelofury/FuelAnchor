@@ -857,6 +857,194 @@ class DatabaseService {
     return null;
   }
 
+  async getMerchantAnalytics(merchantId: string): Promise<any> {
+    this.ensureInitialized();
+
+    const [profileRes, txRes] = await Promise.all([
+      this.supabase!
+        .from('merchant_profiles')
+        .select('total_fuel_dispensed, total_revenue, total_redemptions, fuel_types')
+        .eq('id', merchantId)
+        .single(),
+      this.supabase!
+        .from('transactions')
+        .select('amount, fuel_liters, fuel_type, created_at, status')
+        .or(`merchant_id.eq.${merchantId},to_user_id.eq.${merchantId}`)
+        .eq('status', 'completed')
+        .order('created_at', { ascending: false })
+        .limit(500),
+    ]);
+
+    const profile = profileRes.data;
+    const txs: any[] = txRes.data || [];
+
+    const uniqueUsers = new Set(txs.map((t: any) => t.rider_id || t.from_user_id)).size;
+    const totalSales = txs.reduce((s: number, t: any) => s + (t.amount || 0), 0);
+
+    // Aggregate transactions per day (last 30 days)
+    const byDay: Record<string, number> = {};
+    txs.forEach((t: any) => {
+      const day = (t.created_at || '').split('T')[0];
+      if (day) byDay[day] = (byDay[day] || 0) + (t.amount || 0);
+    });
+    const revenueByDay = Object.entries(byDay)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-30)
+      .map(([date, value]) => ({ date, value }));
+
+    return {
+      merchantId,
+      summary: {
+        totalSales: totalSales || profile?.total_revenue || 0,
+        transactionCount: txs.length || profile?.total_redemptions || 0,
+        uniqueCustomers: uniqueUsers,
+        averageTicket: txs.length ? totalSales / txs.length : 0,
+        totalFuelDispensed: profile?.total_fuel_dispensed || 0,
+      },
+      revenueByDay,
+    };
+  }
+
+  async getFleetDetailedAnalytics(fleetId: string): Promise<any> {
+    this.ensureInitialized();
+
+    const [membersRes, fleetRes] = await Promise.all([
+      this.supabase!
+        .from('fleet_members')
+        .select('*, profiles(full_name, phone_number)')
+        .eq('fleet_id', fleetId)
+        .eq('is_active', true),
+      this.supabase!
+        .from('fleets')
+        .select('*')
+        .eq('id', fleetId)
+        .single(),
+    ]);
+
+    const fleet = fleetRes.data;
+    const members: any[] = membersRes.data || [];
+
+    const totalSpend = members.reduce((s: number, m: any) => s + (m.weekly_spent || 0), 0);
+    const budgetUsed = fleet
+      ? ((fleet.total_fuel_budget || 0) - (fleet.remaining_fuel_budget || 0))
+      : totalSpend;
+
+    return {
+      fleetId,
+      summary: {
+        totalDrivers: fleet?.driver_count || members.length,
+        activeDrivers: members.length,
+        totalFuelBudget: fleet?.total_fuel_budget || 0,
+        remainingBudget: fleet?.remaining_fuel_budget || 0,
+        budgetUtilization: fleet?.total_fuel_budget
+          ? Math.round((budgetUsed / fleet.total_fuel_budget) * 100)
+          : 0,
+      },
+      driverPerformance: members.map((m: any) => ({
+        memberId: m.id,
+        name: m.profiles?.full_name || 'Unknown',
+        vehicleId: m.vehicle_id,
+        dailyLimit: m.daily_limit,
+        dailySpent: m.daily_spent || 0,
+        weeklySpent: m.weekly_spent || 0,
+        totalRedemptions: m.total_redemptions || 0,
+      })),
+    };
+  }
+
+  async getRiderAnalytics(riderId: string): Promise<any> {
+    this.ensureInitialized();
+
+    const [profileRes, riderRes, txRes] = await Promise.all([
+      this.supabase!
+        .from('profiles')
+        .select('full_name, phone_number, stellar_public_key')
+        .eq('id', riderId)
+        .single(),
+      this.supabase!
+        .from('rider_profiles')
+        .select('credit_score, total_fuel_purchased, total_transactions')
+        .eq('id', riderId)
+        .single(),
+      this.supabase!
+        .from('transactions')
+        .select('amount, fuel_liters, fuel_type, merchant_id, created_at, status')
+        .or(`rider_id.eq.${riderId},from_user_id.eq.${riderId}`)
+        .eq('status', 'completed')
+        .order('created_at', { ascending: false })
+        .limit(200),
+    ]);
+
+    const rider = riderRes.data;
+    const txs: any[] = txRes.data || [];
+
+    // Top stations by visit frequency
+    const stationCounts: Record<string, { visits: number; amount: number }> = {};
+    txs.forEach((t: any) => {
+      const mid = t.merchant_id || 'unknown';
+      if (!stationCounts[mid]) stationCounts[mid] = { visits: 0, amount: 0 };
+      stationCounts[mid].visits += 1;
+      stationCounts[mid].amount += t.amount || 0;
+    });
+    const topStations = Object.entries(stationCounts)
+      .sort(([, a], [, b]) => b.visits - a.visits)
+      .slice(0, 5)
+      .map(([merchantId, stats]) => ({ merchantId, ...stats }));
+
+    // Spending trend (last 90 days by day)
+    const byDay: Record<string, number> = {};
+    txs.forEach((t: any) => {
+      const day = (t.created_at || '').split('T')[0];
+      if (day) byDay[day] = (byDay[day] || 0) + (t.amount || 0);
+    });
+    const spendingTrend = Object.entries(byDay)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-90)
+      .map(([date, value]) => ({ date, value }));
+
+    const score = rider?.credit_score || 0;
+    const tier = score >= 800 ? 'Platinum' : score >= 700 ? 'Gold' : score >= 600 ? 'Silver' : score >= 500 ? 'Bronze' : 'Unscored';
+
+    return {
+      riderId,
+      summary: {
+        totalFuelPurchases: rider?.total_fuel_purchased || 0,
+        transactionCount: rider?.total_transactions || txs.length,
+        creditScore: score,
+        creditTier: tier,
+      },
+      spendingTrend,
+      topStations,
+    };
+  }
+
+  async getCreditScoreDistribution(): Promise<any> {
+    this.ensureInitialized();
+    const { data, error } = await this.supabase!
+      .from('rider_profiles')
+      .select('credit_score');
+
+    if (error) {
+      logger.error('Failed to get credit score distribution:', error);
+      throw new Error(`Database error: ${error.message}`);
+    }
+
+    const scores: number[] = (data || []).map((r: any) => r.credit_score || 0);
+    const distribution = {
+      unscored: scores.filter(s => s === 0).length,
+      bronze:   scores.filter(s => s >= 500 && s < 600).length,
+      silver:   scores.filter(s => s >= 600 && s < 700).length,
+      gold:     scores.filter(s => s >= 700 && s < 800).length,
+      platinum: scores.filter(s => s >= 800).length,
+      total:    scores.length,
+      averageScore: scores.length
+        ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+        : 0,
+    };
+
+    return distribution;
+  }
+
   // ==================== HEALTH CHECK ====================
 
   async healthCheck(): Promise<boolean> {
