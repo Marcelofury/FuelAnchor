@@ -417,6 +417,46 @@ export const invokeSorobanContract = async (
   }
 };
 
+/**
+ * Get driver quota from fuel-lock contract
+ */
+export const getDriverQuota = async (driverAddress: string): Promise<any> => {
+  try {
+    const contractId = config.fuelLockContractId;
+    if (!contractId) {
+      throw new Error('FUEL_LOCK_CONTRACT_ID not configured');
+    }
+
+    const adminKeypair = StellarSdk.Keypair.fromSecret(config.stellarAdminSecret);
+    const driverAddr = new StellarSdk.Address(driverAddress);
+
+    const result = await invokeSorobanContract(
+      contractId,
+      'get_driver_quota',
+      adminKeypair,
+      driverAddr
+    );
+
+    return result;
+  } catch (error) {
+    logger.error(`Failed to get driver quota for ${driverAddress}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Get transaction details by hash
+ */
+export const getTransactionDetails = async (txHash: string): Promise<any> => {
+  try {
+    const transaction = await server.transactions().transaction(txHash).call();
+    return transaction;
+  } catch (error) {
+    logger.error(`Failed to get transaction details for ${txHash}:`, error);
+    throw error;
+  }
+};
+
 export default {
   createWallet,
   fundTestnetAccount,
@@ -430,4 +470,6 @@ export default {
   streamTransactions,
   getTransactionHistory,
   invokeSorobanContract,
+  getDriverQuota,
+  getTransactionDetails,
 };
