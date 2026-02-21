@@ -8,10 +8,13 @@ import '../../../wallet/domain/entities/wallet_balance.dart';
 class StellarService {
   final FlutterSecureStorage _secureStorage;
   final StellarSDK _sdk;
+  late final SorobanServer _sorobanServer;
   
   static const String _keyPairSecretKey = 'stellar_secret_key';
   static const String _keyPairPublicKey = 'stellar_public_key';
   static const String _fuelAssetCode = 'FUEL';
+  static const String _testnetRpcUrl = 'https://soroban-testnet.stellar.org';
+  static const String _mainnetRpcUrl = 'https://mainnet.stellar.validationcloud.io/v1/soroban/rpc';
   
   // Deployed contract IDs from Phase 1 (Feb 21, 2026)
   static const String _fuelAssetIssuer = 'GCHWQJ4OVQBBOSWEQUXYXFMWVIINIMN2AXWU6FRKCB7YA6NPFFJOJXKX';
@@ -21,7 +24,9 @@ class StellarService {
     required FlutterSecureStorage secureStorage,
     bool useTestnet = true,
   })  : _secureStorage = secureStorage,
-        _sdk = useTestnet ? StellarSDK.TESTNET : StellarSDK.PUBLIC;
+        _sdk = useTestnet ? StellarSDK.TESTNET : StellarSDK.PUBLIC {
+    _sorobanServer = SorobanServer(useTestnet ? _testnetRpcUrl : _mainnetRpcUrl);
+  }
 
   /// Generate a new Stellar keypair and securely store it
   Future<Either<Failure, KeyPair>> generateAndStoreKeypair() async {
@@ -164,40 +169,42 @@ class StellarService {
             
             // Build contract invocation for pay_merchant function
             // Parameters: driver (Address), merchant (Address), amount (i128), driver_gps ((i128, i128))
-            final contractAddress = Address.forContractId(_sorobanContractId);
             
             // Create XDR values for function arguments
             final driverAddressValue = Address.forAccountId(driverAddress);
             final merchantAddressValue = Address.forAccountId(merchantId);
+            final amountBigInt = BigInt.from(int.parse(amount));
             final amountValue = XdrSCVal.forI128(
               XdrInt128Parts(
-                XdrUint64(BigInt.from((int.parse(amount) >> 64) & 0xFFFFFFFFFFFFFFFF).toInt()),
-                XdrUint64(BigInt.from(int.parse(amount) & 0xFFFFFFFFFFFFFFFF).toInt()),
+                XdrInt64(amountBigInt < BigInt.zero ? BigInt.from(-1) : BigInt.zero),
+                XdrUint64(amountBigInt.toUnsigned(64)),
               ),
             );
             
             // Create GPS tuple (latitude, longitude) in micro-degrees
+            final latBigInt = BigInt.from(latMicroDegrees);
+            final lngBigInt = BigInt.from(lngMicroDegrees);
             final gpsLatValue = XdrSCVal.forI128(
               XdrInt128Parts(
-                XdrUint64(BigInt.from((latMicroDegrees >> 64) & 0xFFFFFFFFFFFFFFFF).toInt()),
-                XdrUint64(BigInt.from(latMicroDegrees & 0xFFFFFFFFFFFFFFFF).toInt()),
+                XdrInt64(latBigInt < BigInt.zero ? BigInt.from(-1) : BigInt.zero),
+                XdrUint64(latBigInt.toUnsigned(64)),
               ),
             );
             final gpsLngValue = XdrSCVal.forI128(
               XdrInt128Parts(
-                XdrUint64(BigInt.from((lngMicroDegrees >> 64) & 0xFFFFFFFFFFFFFFFF).toInt()),
-                XdrUint64(BigInt.from(lngMicroDegrees & 0xFFFFFFFFFFFFFFFF).toInt()),
+                XdrInt64(lngBigInt < BigInt.zero ? BigInt.from(-1) : BigInt.zero),
+                XdrUint64(lngBigInt.toUnsigned(64)),
               ),
             );
             final gpsTuple = XdrSCVal.forVec([gpsLatValue, gpsLngValue]);
             
             // Build InvokeContractHostFunction operation
             final invokeOperation = InvokeContractHostFunction(
-              contractAddress.toXdr(),
-              XdrSCSymbol('pay_merchant'),
-              [
-                driverAddressValue.toXdr(),
-                merchantAddressValue.toXdr(),
+              _sorobanContractId,
+              'pay_merchant',
+              arguments: [
+                driverAddressValue.toXdrSCVal(),
+                merchantAddressValue.toXdrSCVal(),
                 amountValue,
                 gpsTuple,
               ],
@@ -212,20 +219,17 @@ class StellarService {
             transaction.sign(keyPair, Network.TESTNET);
             
             // Submit to Soroban RPC
-            final response = await _sdk.sorobanServer.sendTransaction(transaction);
+            final response = await _sorobanServer.sendTransaction(transaction);
             
-            if (response.status == GetTransactionStatus.SUCCESS) {
-              final txHash = response.hash;
-              AppLogger.info('Payment successful! Transaction hash: $txHash');
-              return Right(txHash);
-            } else if (response.status == GetTransactionStatus.ERROR) {
-              final errorMsg = response.error ?? 'Unknown transaction error';
+            if (response.status == SendTransactionResponse.STATUS_ERROR) {
+              final errorMsg = response.errorResultXdr ?? 'Unknown transaction error';
               AppLogger.error('Payment failed: $errorMsg');
               return Left(Failure.blockchainError('Payment failed: $errorMsg'));
             } else {
-              // Transaction pending
-              AppLogger.info('Transaction pending: ${response.hash}');
-              return Right(response.hash);
+              // STATUS_PENDING - transaction submitted successfully, return hash for tracking
+              final txHash = response.hash ?? 'pending';
+              AppLogger.info('Payment submitted! Transaction hash: $txHash');
+              return Right(txHash);
             }
           } catch (e, stackTrace) {
             AppLogger.error('Error executing payment', e, stackTrace);
