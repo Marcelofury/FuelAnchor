@@ -1,5 +1,6 @@
 import express, { Request, Response, NextFunction } from 'express';
 import { authenticate, authorize } from '../middleware/auth';
+import db from '../services/database';
 import { logger } from '../utils/logger';
 
 const router = express.Router();
@@ -14,38 +15,35 @@ router.get(
   authenticate,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = req.user?.userId;
-      const role = req.user?.role;
+      const userId = req.user?.userId!;
+      const role = req.user?.role!;
 
-      // In real implementation, fetch from database
-      const analytics = {
-        overview: {
-          totalTransactions: 1247,
-          totalVolume: 125490.50,
-          activeUsers: 342,
-          averageTransactionValue: 100.63,
-        },
-        recentTransactions: [
-          {
-            id: '1',
-            type: 'payment',
-            amount: 50.00,
-            timestamp: new Date().toISOString(),
-            status: 'completed',
+      let stats: any = {};
+      try {
+        stats = await db.getDashboardStats(userId, role);
+      } catch (err) {
+        logger.warn('getDashboardStats failed, using fallback:', err);
+        stats = {
+          overview: {
+            totalTransactions: 0,
+            totalVolume: 0,
+            activeUsers: 0,
+            averageTransactionValue: 0,
           },
-          // ... more transactions
-        ],
-        periodicData: {
-          daily: generateMockTimeSeries(7),
-          weekly: generateMockTimeSeries(4),
-          monthly: generateMockTimeSeries(12),
-        },
-        userRole: role,
-      };
+        };
+      }
 
       res.json({
         success: true,
-        data: analytics,
+        data: {
+          ...stats,
+          periodicData: {
+            daily: generateMockTimeSeries(7),
+            weekly: generateMockTimeSeries(4),
+            monthly: generateMockTimeSeries(12),
+          },
+          userRole: role,
+        },
       });
     } catch (error) {
       next(error);
