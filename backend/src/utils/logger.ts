@@ -27,17 +27,20 @@ export const logger = winston.createLogger({
         ? jsonFormat 
         : winston.format.combine(winston.format.colorize(), logFormat),
     }),
-    new winston.transports.File({ 
-      filename: 'logs/error.log', 
-      level: 'error',
-      maxsize: 5242880, // 5MB
-      maxFiles: 5,
-    }),
-    new winston.transports.File({ 
-      filename: 'logs/combined.log',
-      maxsize: 5242880,
-      maxFiles: 5,
-    }),
+    // File transports only in development (containers log to stdout in production)
+    ...(config.nodeEnv !== 'production' ? [
+      new winston.transports.File({ 
+        filename: 'logs/error.log', 
+        level: 'error',
+        maxsize: 5242880, // 5MB
+        maxFiles: 5,
+      }),
+      new winston.transports.File({ 
+        filename: 'logs/combined.log',
+        maxsize: 5242880,
+        maxFiles: 5,
+      }),
+    ] : []),
   ],
 });
 
