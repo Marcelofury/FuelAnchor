@@ -2,6 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import { authenticate } from '../middleware/auth';
 import { mpesaService } from '../services/mpesa';
 import { mtnMoMoService } from '../services/mtn_momo';
+import { airtelService } from '../services/airtel';
 import { logger } from '../utils/logger';
 import { body, validationResult } from 'express-validator';
 import { db } from '../services/database';
@@ -357,6 +358,136 @@ router.get(
         success: true,
         data: {
           mtn: mtnBalance,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @route   POST /api/v1/mobile-money/deposit/airtel
+ * @desc    Initiate Airtel Money deposit (Collection)
+ * @access  Private
+ */
+router.post(
+  '/deposit/airtel',
+  authenticate,
+  [
+    body('phoneNumber').isMobilePhone('any').withMessage('Invalid phone number'),
+    body('amount').isFloat({ min: 1 }).withMessage('Amount must be greater than 0'),
+    body('currency').optional().isIn(['KES', 'UGX', 'TZS', 'RWF']).withMessage('Invalid currency'),
+  ],
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ success: false, errors: errors.array() });
+      }
+
+      const { phoneNumber, amount, currency = 'KES' } = req.body;
+      const userId = req.user?.userId;
+
+      logger.info('Initiating Airtel deposit', { userId, phoneNumber, amount, currency });
+
+      const transactionId = await airtelService.requestCollection(
+        phoneNumber,
+        amount,
+        currency,
+        `FUEL-${userId}`
+      );
+
+      res.json({
+        success: true,
+        data: {
+          transactionId,
+          message: 'Payment request sent. Please approve on your Airtel Money app.',
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @route   GET /api/v1/mobile-money/deposit/airtel/status/:transactionId
+ * @desc    Check Airtel deposit status
+ * @access  Private
+ */
+router.get(
+  '/deposit/airtel/status/:transactionId',
+  authenticate,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { transactionId } = req.params;
+      const { country = 'KE', currency = 'KES' } = req.query as Record<string, string>;
+
+      const status = await airtelService.getTransactionStatus(transactionId, country, currency);
+
+      res.json({ success: true, data: status });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @route   POST /api/v1/mobile-money/withdraw/airtel
+ * @desc    Initiate Airtel Money withdrawal (Disbursement)
+ * @access  Private
+ */
+router.post(
+  '/withdraw/airtel',
+  authenticate,
+  [
+    body('phoneNumber').isMobilePhone('any').withMessage('Invalid phone number'),
+    body('amount').isFloat({ min: 1 }).withMessage('Amount must be greater than 0'),
+    body('currency').optional().isIn(['KES', 'UGX', 'TZS', 'RWF']).withMessage('Invalid currency'),
+  ],
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ success: false, errors: errors.array() });
+      }
+
+      const { phoneNumber, amount, currency = 'KES' } = req.body;
+      const userId = req.user?.userId;
+
+      const userProfile = await db.getUserProfile(userId!);
+      if (!userProfile) {
+        return res.status(404).json({ success: false, error: { message: 'User profile not found' } });
+      }
+
+      const fuelAmount = tokenMinting.calculateFiatAmount(amount, currency as any);
+      const hasSufficientBalance = await tokenMinting.checkBalance(
+        userProfile.stellar_public_key,
+        fuelAmount
+      );
+
+      if (!hasSufficientBalance) {
+        return res.status(400).json({
+          success: false,
+          error: { message: `Insufficient FUEL balance. Required: ${fuelAmount} FUEL` },
+        });
+      }
+
+      logger.info('Initiating Airtel withdrawal', { userId, phoneNumber, amount, currency });
+
+      const transactionId = await airtelService.disburseFunds(
+        phoneNumber,
+        amount,
+        currency,
+        `WITHDRAW-${userId}`
+      );
+
+      res.json({
+        success: true,
+        data: {
+          transactionId,
+          message: 'Withdrawal initiated. Funds will be sent to your Airtel Money account.',
         },
       });
     } catch (error) {
