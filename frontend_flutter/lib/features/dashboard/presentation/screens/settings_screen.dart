@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../../core/enums/user_role.dart';
 import '../../../auth/providers/providers.dart';
 
 class SettingsScreen extends ConsumerWidget {
