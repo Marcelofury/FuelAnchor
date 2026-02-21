@@ -20,6 +20,8 @@ import stellarRoutes from './api/stellar';
 import webhookRoutes from './api/webhooks';
 import mobileMoneyRoutes from './api/mobile_money';
 import analyticsRoutes from './api/analytics';
+import sep31Routes from './api/sep31';
+import docsRoutes from './api/docs';
 
 const app = express();
 
@@ -92,6 +94,10 @@ app.use('/api/v1/stellar', stellarRoutes);
 app.use('/api/v1/webhooks', webhookLimiter, webhookRoutes);
 app.use('/api/v1/mobile-money', transactionLimiter, mobileMoneyRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
+app.use('/api/v1/sep31', transactionLimiter, sep31Routes);
+
+// API Documentation
+app.use('/api/docs', docsRoutes);
 
 // Error handling
 app.use(notFoundHandler);

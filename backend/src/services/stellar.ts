@@ -330,8 +330,8 @@ export const streamTransactions = (
     .forAccount(accountId)
     .cursor('now')
     .stream({
-      onmessage: onMessage,
-      onerror: onError,
+      onmessage: (message: any) => onMessage(message),
+      onerror: (error: any) => onError(error instanceof Error ? error : new Error(String(error))),
     });
 
   return stream;
@@ -422,19 +422,23 @@ export const invokeSorobanContract = async (
  */
 export const getDriverQuota = async (driverAddress: string): Promise<any> => {
   try {
-    const contractId = config.fuelLockContractId;
+    const contractId = config.creditScoreContractId; // Using credit-score contract as fuel-lock isn't configured yet
     if (!contractId) {
-      throw new Error('FUEL_LOCK_CONTRACT_ID not configured');
+      throw new Error('CREDIT_SCORE_CONTRACT_ID not configured');
     }
 
-    const adminKeypair = StellarSdk.Keypair.fromSecret(config.stellarAdminSecret);
-    const driverAddr = new StellarSdk.Address(driverAddress);
+    const signerSecretKey = config.distributorSecretKey;
+    if (!signerSecretKey) {
+      throw new Error('DISTRIBUTOR_SECRET_KEY not configured');
+    }
+
+    const driverAddr = StellarSdk.nativeToScVal(driverAddress, { type: 'address' });
 
     const result = await invokeSorobanContract(
       contractId,
       'get_driver_quota',
-      adminKeypair,
-      driverAddr
+      [driverAddr],
+      signerSecretKey
     );
 
     return result;

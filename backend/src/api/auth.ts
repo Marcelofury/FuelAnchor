@@ -78,13 +78,13 @@ router.post(
     const token = jwt.sign(
       { userId: user.id, role: user.role, walletAddress: user.walletAddress },
       config.jwtSecret,
-      { expiresIn: config.jwtExpiresIn }
+      { expiresIn: config.jwtExpiresIn } as jwt.SignOptions
     );
 
     const refreshToken = jwt.sign(
       { userId: user.id },
       config.jwtSecret,
-      { expiresIn: config.jwtRefreshExpiresIn }
+      { expiresIn: config.jwtRefreshExpiresIn } as jwt.SignOptions
     );
 
     logger.info(`User registered: ${email} as ${role}`);
@@ -141,13 +141,13 @@ router.post(
     const token = jwt.sign(
       { userId: user.id, role: user.role, walletAddress: user.walletAddress },
       config.jwtSecret,
-      { expiresIn: config.jwtExpiresIn }
+      { expiresIn: config.jwtExpiresIn } as jwt.SignOptions
     );
 
     const refreshToken = jwt.sign(
       { userId: user.id },
       config.jwtSecret,
-      { expiresIn: config.jwtRefreshExpiresIn }
+      { expiresIn: config.jwtRefreshExpiresIn } as jwt.SignOptions
     );
 
     logger.info(`User logged in: ${email}`);
@@ -197,7 +197,7 @@ router.post(
       const token = jwt.sign(
         { userId: user.id, role: user.role, walletAddress: user.walletAddress },
         config.jwtSecret,
-        { expiresIn: config.jwtExpiresIn }
+        { expiresIn: config.jwtExpiresIn } as jwt.SignOptions
       );
 
       res.json({

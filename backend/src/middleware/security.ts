@@ -56,17 +56,17 @@ export const verifyTransactionSignature = async (
 ): Promise<boolean> => {
   try {
     // Parse the transaction envelope
-    const { Transaction } = await import('@stellar/stellar-sdk');
-    const tx = Transaction.fromEnvelope(transaction);
+    const { TransactionBuilder } = await import('@stellar/stellar-sdk');
+    const tx = TransactionBuilder.fromXDR(transaction, (await import('@stellar/stellar-sdk')).Networks.TESTNET);
     
     // Check if the expected signer is in the transaction signatures
-    const signers = tx.signatures.map(sig => {
+    const signers = tx.signatures.map((sig: any) => {
       // Extract public key from signature (implementation depends on your use case)
       return sig.hint().toString('hex');
     });
 
     // Verify the expected signer is present
-    return signers.some(signer => signer.includes(expectedSigner.slice(-8)));
+    return signers.some((signer: string) => signer.includes(expectedSigner.slice(-8)));
   } catch (error) {
     return false;
   }

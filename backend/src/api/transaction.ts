@@ -177,7 +177,7 @@ router.post(
 router.get(
   '/pending',
   authenticate,
-  authorize('station_owner', 'merchant'),
+  authorize('station_owner'),
   asyncHandler(async (req: Request, res: Response) => {
     const merchantAddress = req.user?.walletAddress;
 
@@ -196,7 +196,7 @@ router.get(
       data: {
         transactions: pendingTransactions.filter(tx => tx.successful),
         count: pendingTransactions.length,
-        totalAmount: pendingTransactions.reduce((sum, tx) => sum + parseFloat(tx.fee_charged || '0'), 0),
+        totalAmount: pendingTransactions.reduce((sum, tx) => sum + parseFloat(String(tx.fee_charged || '0')), 0),
       },
     });
   })
@@ -249,7 +249,7 @@ router.get(
 router.post(
   '/settle',
   authenticate,
-  authorize('station_owner', 'merchant'),
+  authorize('station_owner'),
   [
     body('date').isISO8601(),
     body('totalAmount').isNumeric(),

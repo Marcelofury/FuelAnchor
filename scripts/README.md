@@ -50,6 +50,44 @@ This script will:
 Mint FUEL tokens for testing:
 
 ```powershell
+./scripts/mint_tokens.ps1 -Amount 1000000 -Recipient GAKSTEST...
+```
+
+### 4. Generate Flutter Contract Bindings
+
+Auto-generate Dart bindings for Flutter app from deployed contracts:
+
+```powershell
+./scripts/generate_contract_bindings.ps1 -Network testnet
+```
+
+This script will:
+- ✅ Read contract IDs from `CONTRACT_IDS.txt`
+- ✅ Extract contract metadata using Soroban CLI
+- ✅ Generate type-safe Dart classes for each contract
+- ✅ Create barrel export file for easy imports
+- ✅ Output files to `frontend_flutter/lib/features/blockchain/generated/`
+
+**Usage in Flutter**:
+```dart
+import 'package:fuelanchor/features/blockchain/generated/contracts.dart';
+
+// Use generated contract classes
+final fuelToken = FuelTokenContract(
+  server: sorobanServer,
+  networkPassphrase: Networks.TESTNET,
+);
+```
+
+**Linux/macOS**:
+```bash
+chmod +x ./scripts/generate_contract_bindings.sh
+./scripts/generate_contract_bindings.sh testnet
+```
+
+### 5. Monitor Contracts
+
+```powershell
 # Mint 10,000 FUEL to admin account
 ./scripts/mint_tokens.ps1
 

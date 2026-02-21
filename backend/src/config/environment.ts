@@ -24,6 +24,8 @@ export const config = {
   stellarHorizonUrl: process.env.STELLAR_HORIZON_URL || 'https://horizon-testnet.stellar.org',
   stellarSorobanRpcUrl: process.env.STELLAR_SOROBAN_RPC_URL || 'https://soroban-testnet.stellar.org',
   stellarNetworkPassphrase: process.env.STELLAR_NETWORK_PASSPHRASE || 'Test SDF Network ; September 2015',
+  stellarIssuer: process.env.STELLAR_ISSUER || '',
+  usdcIssuer: process.env.USDC_ISSUER || 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5', // Testnet USDC issuer
 
   // FuelAnchor Stellar Accounts
   fuelTokenIssuer: process.env.FUEL_TOKEN_ISSUER || '',
@@ -78,6 +80,12 @@ export const config = {
 
   // Logging
   logLevel: process.env.LOG_LEVEL || 'info',
+}
+
+// Export a more convenient environment object with aliases
+export const environment = {
+  ...config,
+  horizonUrl: config.stellarHorizonUrl,
 };
 
 // Validate required environment variables in production

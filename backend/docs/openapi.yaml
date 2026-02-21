@@ -1,0 +1,530 @@
+openapi: 3.0.3
+info:
+  title: FuelAnchor API
+  description: |
+    Blockchain-based fuel voucher system for East Africa.
+    
+    ## Features
+    - 🔐 JWT Authentication
+    - 💰 FUEL Token Management on Stellar Blockchain
+    - 🎫 Voucher Generation & Redemption
+    - 📍 GPS-based Geofencing
+    - 💳 Mobile Money Integration (M-Pesa, MTN MoMo)
+    - 🌍 Cross-Border Payments (SEP-31)
+    - 📊 Analytics & Reporting
+    
+    ## Base URL
+    - **Testnet**: `https://api-testnet.fuelanchor.io/api/v1`
+    - **Production**: `https://api.fuelanchor.io/api/v1`
+  version: 1.0.0
+  contact:
+    name: FuelAnchor Team
+    email: support@fuelanchor.io
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Local development
+  - url: https://api-testnet.fuelanchor.io/api/v1
+    description: Testnet
+  - url: https://api.fuelanchor.io/api/v1
+    description: Production
+
+tags:
+  - name: Authentication
+    description: User authentication and registration
+  - name: Wallet
+    description: Stellar wallet operations
+  - name: Transactions
+    description: Payment and transaction management
+  - name: Fleet
+    description: Fleet operator management
+  - name: Drivers
+    description: Driver management
+  - name: Stations
+    description: Fuel station management
+  - name: Vouchers
+    description: Voucher generation and redemption
+  - name: Credit
+    description: Credit scoring system
+  - name: Mobile Money
+    description: M-Pesa and MTN MoMo integration
+  - name: SEP-31
+    description: Cross-border payment protocol
+  - name: Analytics
+    description: Dashboard and reporting
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+        details:
+          type: array
+          items:
+            type: object
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        role:
+          type: string
+          enum: [rider, driver, merchant, fleet_operator, admin]
+        phone:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        from_account:
+          type: string
+        to_account:
+          type: string
+        amount:
+          type: number
+        type:
+          type: string
+          enum: [payment, refund, voucher, credit_purchase]
+        status:
+          type: string
+          enum: [pending, completed, failed, cancelled]
+        stellar_tx_hash:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        created_at:
+          type: string
+          format: date-time
+
+    Voucher:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        fleet_id:
+          type: string
+        driver_id:
+          type: string
+        amount:
+          type: number
+        status:
+          type: string
+          enum: [active, redeemed, expired, cancelled]
+        valid_until:
+          type: string
+          format: date-time
+
+    CreditScore:
+      type: object
+      properties:
+        user_id:
+          type: string
+        score:
+          type: number
+          minimum: 0
+          maximum: 100
+        payment_history:
+          type: number
+        transaction_volume:
+          type: number
+        account_age:
+          type: number
+        updated_at:
+          type: string
+          format: date-time
+
+paths:
+  /auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, name, role, phone]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+                name:
+                  type: string
+                role:
+                  type: string
+                  enum: [rider, driver, merchant, fleet_operator]
+                phone:
+                  type: string
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  token:
+                    type: string
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  token:
+                    type: string
+        '401':
+          description: Invalid credentials
+
+  /transactions:
+    get:
+      tags: [Transactions]
+      summary: Get user transactions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, completed, failed, cancelled]
+      responses:
+        '200':
+          description: List of transactions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transactions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Transaction'
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+
+    post:
+      tags: [Transactions]
+      summary: Create new transaction
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [from_account, to_account, amount, type, latitude, longitude]
+              properties:
+                from_account:
+                  type: string
+                to_account:
+                  type: string
+                amount:
+                  type: number
+                type:
+                  type: string
+                  enum: [payment, refund, voucher, credit_purchase]
+                latitude:
+                  type: number
+                  minimum: -90
+                  maximum: 90
+                longitude:
+                  type: number
+                  minimum: -180
+                  maximum: 180
+      responses:
+        '201':
+          description: Transaction created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+
+  /sep31/info:
+    get:
+      tags: [SEP-31]
+      summary: Get SEP-31 service information
+      responses:
+        '200':
+          description: Service information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  receive:
+                    type: object
+                  send:
+                    type: object
+
+  /sep31/quotes:
+    post:
+      tags: [SEP-31]
+      summary: Create cross-border payment quote
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sell_asset, buy_asset, sell_amount]
+              properties:
+                sell_asset:
+                  type: string
+                  example: "KES"
+                buy_asset:
+                  type: string
+                  example: "UGX"
+                sell_amount:
+                  type: string
+                  example: "1000"
+      responses:
+        '201':
+          description: Quote created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  price:
+                    type: string
+                  sell_asset:
+                    type: string
+                  buy_asset:
+                    type: string
+                  sell_amount:
+                    type: string
+                  buy_amount:
+                    type: string
+                  expires_at:
+                    type: string
+                    format: date-time
+                  fee:
+                    type: object
+
+  /mobile-money/deposit/mpesa:
+    post:
+      tags: [Mobile Money]
+      summary: Initiate M-Pesa STK Push
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, amount, user_id]
+              properties:
+                phone:
+                  type: string
+                  example: "+254712345678"
+                amount:
+                  type: number
+                  example: 1000
+                user_id:
+                  type: string
+      responses:
+        '200':
+          description: STK Push initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  CheckoutRequestID:
+                    type: string
+                  ResponseCode:
+                    type: string
+                  ResponseDescription:
+                    type: string
+
+  /analytics/dashboard:
+    get:
+      tags: [Analytics]
+      summary: Get dashboard analytics
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_volume:
+                    type: number
+                  transaction_count:
+                    type: integer
+                  active_users:
+                    type: integer
+                  time_series:
+                    type: array
+
+  /stations/nearby:
+    get:
+      tags: [Stations]
+      summary: Get nearby fuel stations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: lng
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: radius
+          in: query
+          schema:
+            type: number
+            default: 10
+      responses:
+        '200':
+          description: List of nearby stations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stations:
+                    type: array
+
+  /credit/score/{userId}:
+    get:
+      tags: [Credit]
+      summary: Get user credit score
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Credit score
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreditScore'
+
+  /health:
+    get:
+      tags: [System]
+      summary: Health check
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  timestamp:
+                    type: string
+                  version:
+                    type: string
