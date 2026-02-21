@@ -212,7 +212,7 @@ class StellarService {
             
             // Create transaction
             final transaction = TransactionBuilder(account)
-                .addOperation(invokeOperation.toOperation())
+                .addOperation(InvokeHostFuncOpBuilder(invokeOperation).build())
                 .build();
             
             // Sign transaction
