@@ -12,7 +12,9 @@ export interface UserProfile {
   id: string;
   full_name: string;
   phone_number: string;
-  role: 'rider' | 'fleet_driver' | 'merchant';
+  email?: string;
+  password_hash?: string;
+  role: 'rider' | 'fleet_driver' | 'merchant' | 'fleet_operator' | 'station_owner' | 'admin';
   stellar_public_key: string;
   created_at?: string;
   updated_at?: string;
@@ -212,6 +214,55 @@ class DatabaseService {
     }
 
     return data;
+  }
+
+  async getUserByEmail(email: string): Promise<UserProfile | null> {
+    this.ensureInitialized();
+    const { data, error } = await this.supabase!
+      .from('profiles')
+      .select('*')
+      .eq('email', email)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') return null;
+      logger.error('Failed to get user by email:', error);
+      throw new Error(`Database error: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  async getUserByPhone(phone: string): Promise<UserProfile | null> {
+    this.ensureInitialized();
+    // Normalize phone: try exact match first, then strip leading + if present
+    const normalized = phone.startsWith('+') ? phone : `+${phone}`;
+    const { data, error } = await this.supabase!
+      .from('profiles')
+      .select('*')
+      .or(`phone_number.eq.${phone},phone_number.eq.${normalized}`)
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      logger.error('Failed to get user by phone:', error);
+      throw new Error(`Database error: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  async saveUserAuth(userId: string, email: string, passwordHash: string): Promise<void> {
+    this.ensureInitialized();
+    const { error } = await this.supabase!
+      .from('profiles')
+      .update({ email: email.toLowerCase(), password_hash: passwordHash })
+      .eq('id', userId);
+
+    if (error) {
+      logger.error('Failed to save user auth credentials:', error);
+      throw new Error(`Database error: ${error.message}`);
+    }
   }
 
   async updateUserProfile(userId: string, updates: Partial<UserProfile>): Promise<UserProfile> {
@@ -748,6 +799,20 @@ class DatabaseService {
       logger.error('Failed to update fleet member spending:', error);
       // Non-fatal — don't throw
     }
+  }
+
+  async getAllFleets(): Promise<Fleet[]> {
+    this.ensureInitialized();
+    const { data, error } = await this.supabase!
+      .from('fleets')
+      .select('*, profiles(full_name, phone_number)')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      logger.error('Failed to get all fleets:', error);
+      throw new Error(`Database error: ${error.message}`);
+    }
+    return data || [];
   }
 
   async getFleetAnalytics(fleetId: string): Promise<any> {
