@@ -10,6 +10,7 @@ build/
 target/
 
 # Environment files
+C:\Users\USER\FuelAnchor\backend\.env
 .env
 .env.local
 .env.*.local
