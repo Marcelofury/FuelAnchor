@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:math' as math;
 import '../../../../core/constants/app_colors.dart';
-import '../../../../core/utils/responsive.dart';
-import '../../../auth/providers/providers.dart';
 
 class FleetDashboardScreen extends ConsumerStatefulWidget {
   const FleetDashboardScreen({super.key});
