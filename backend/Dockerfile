@@ -25,6 +25,7 @@ RUN adduser -S nodejs -u 1001
 
 # Copy built application
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
+COPY --from=builder --chown=nodejs:nodejs /app/docs ./docs
 COPY --from=builder --chown=nodejs:nodejs /app/package*.json ./
 
 # Install production dependencies only
