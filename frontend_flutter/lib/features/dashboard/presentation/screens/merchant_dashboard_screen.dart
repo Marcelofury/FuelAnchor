@@ -100,15 +100,15 @@ class _MerchantDashboardScreenState extends ConsumerState<MerchantDashboardScree
                                 size: 200.0,
                                 backgroundColor: Colors.white,
                               ),
-                              loading: () => SizedBox(
+                              loading: () => const SizedBox(
                                 width: 200,
                                 height: 200,
-                                child: const Center(child: CircularProgressIndicator()),
+                                child: Center(child: CircularProgressIndicator()),
                               ),
-                              error: (_, __) => SizedBox(
+                              error: (_, __) => const SizedBox(
                                 width: 200,
                                 height: 200,
-                                child: const Center(child: Icon(Icons.error)),
+                                child: Center(child: Icon(Icons.error)),
                               ),
                             ),
                           ),
