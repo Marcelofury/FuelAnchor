@@ -1,19 +1,16 @@
 /**
- * Fleet Management Routes
+ * Fleet Management Routes – backed by Supabase DB
  */
 
 import { Router, Request, Response } from 'express';
 import { body, query, param, validationResult } from 'express-validator';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
 import { authenticate, authorize } from '../middleware/auth';
+import db from '../services/database';
 import stellarService from '../services/stellar';
 import { logger } from '../utils/logger';
 
 const router = Router();
-
-// In-memory storage for fleets
-const fleets: Map<string, any> = new Map();
-const fleetDrivers: Map<string, any[]> = new Map();
 
 /**
  * Create a new fleet
@@ -35,92 +32,68 @@ router.post(
     }
 
     const { name, description, country, vehicleCount } = req.body;
-    const fleetId = `fleet_${Date.now()}`;
 
-    const fleet = {
-      id: fleetId,
+    // Create a Stellar wallet for the fleet
+    const wallet = stellarService.createWallet();
+
+    const fleet = await db.createFleet({
       name,
       description,
       country,
-      vehicleCount,
-      operatorId: req.user?.userId,
-      walletAddress: req.user?.walletAddress,
-      totalFuelBudget: 0,
-      remainingFuelBudget: 0,
-      driverCount: 0,
-      createdAt: new Date().toISOString(),
-      isActive: true,
-    };
-
-    fleets.set(fleetId, fleet);
-    fleetDrivers.set(fleetId, []);
-
-    logger.info(`Fleet created: ${fleetId} by ${req.user?.userId}`);
-
-    res.status(201).json({
-      success: true,
-      data: fleet,
+      vehicle_count: vehicleCount,
+      operator_id: req.user!.userId,
+      stellar_public_key: wallet.publicKey,
+      total_fuel_budget: 0,
+      remaining_fuel_budget: 0,
+      driver_count: 0,
+      is_active: true,
     });
+
+    logger.info(`Fleet created: ${fleet.id} by ${req.user!.userId}`);
+
+    res.status(201).json({ success: true, data: fleet });
   })
 );
 
 /**
- * Get all fleets for operator
+ * Get all fleets for the authenticated operator
  */
 router.get(
   '/',
   authenticate,
   authorize('fleet_operator', 'admin'),
   asyncHandler(async (req: Request, res: Response) => {
-    const operatorFleets: any[] = [];
+    const fleets = req.user!.role === 'admin'
+      ? await db.getFleetsByOperator('')   // TODO: add admin getAll method
+      : await db.getFleetsByOperator(req.user!.userId);
 
-    for (const [, fleet] of fleets) {
-      if (fleet.operatorId === req.user?.userId || req.user?.role === 'admin') {
-        operatorFleets.push(fleet);
-      }
-    }
-
-    res.json({
-      success: true,
-      data: operatorFleets,
-    });
+    res.json({ success: true, data: fleets });
   })
 );
 
 /**
- * Get fleet by ID
+ * Get fleet by ID with members
  */
 router.get(
   '/:fleetId',
   authenticate,
   [param('fleetId').notEmpty()],
   asyncHandler(async (req: Request, res: Response) => {
-    const fleet = fleets.get(req.params.fleetId);
+    const fleet = await db.getFleet(req.params.fleetId);
+    if (!fleet) throw new AppError('Fleet not found', 404, 'FLEET_NOT_FOUND');
 
-    if (!fleet) {
-      throw new AppError('Fleet not found', 404, 'FLEET_NOT_FOUND');
-    }
-
-    // Check authorization
-    if (fleet.operatorId !== req.user?.userId && req.user?.role !== 'admin') {
+    if (fleet.operator_id !== req.user!.userId && req.user!.role !== 'admin') {
       throw new AppError('Unauthorized', 403, 'FORBIDDEN');
     }
 
-    // Get fleet drivers
-    const drivers = fleetDrivers.get(req.params.fleetId) || [];
+    const members = await db.getFleetMembers(req.params.fleetId);
 
-    res.json({
-      success: true,
-      data: {
-        ...fleet,
-        drivers,
-      },
-    });
+    res.json({ success: true, data: { ...fleet, members } });
   })
 );
 
 /**
- * Purchase fuel credits for fleet
+ * Purchase fuel credits for fleet (mint FUEL tokens)
  */
 router.post(
   '/:fleetId/purchase',
@@ -133,41 +106,34 @@ router.post(
     body('paymentReference').notEmpty(),
   ],
   asyncHandler(async (req: Request, res: Response) => {
-    const fleet = fleets.get(req.params.fleetId);
+    const fleet = await db.getFleet(req.params.fleetId);
+    if (!fleet) throw new AppError('Fleet not found', 404, 'FLEET_NOT_FOUND');
 
-    if (!fleet) {
-      throw new AppError('Fleet not found', 404, 'FLEET_NOT_FOUND');
-    }
-
-    if (fleet.operatorId !== req.user?.userId && req.user?.role !== 'admin') {
+    if (fleet.operator_id !== req.user!.userId && req.user!.role !== 'admin') {
       throw new AppError('Unauthorized', 403, 'FORBIDDEN');
     }
 
     const { amount, paymentMethod, paymentReference } = req.body;
-
-    // Simulate payment verification
-    // In production, integrate with M-Pesa, MTN, etc.
     logger.info(`Processing ${paymentMethod} payment: ${paymentReference}`);
 
     // Mint FUEL tokens to fleet wallet
     const mintResult = await stellarService.mintFuelTokens({
-      to: fleet.walletAddress,
+      to: fleet.stellar_public_key!,
       amount: amount.toString(),
     });
 
-    // Update fleet budget
-    fleet.totalFuelBudget += amount;
-    fleet.remainingFuelBudget += amount;
-    fleets.set(req.params.fleetId, fleet);
+    const newTotal = (fleet.total_fuel_budget || 0) + amount;
+    const newRemaining = (fleet.remaining_fuel_budget || 0) + amount;
+    await db.updateFleetBudget(fleet.id!, newTotal, newRemaining);
 
-    logger.info(`Purchased ${amount} FUEL for fleet ${req.params.fleetId}`);
+    logger.info(`Purchased ${amount} FUEL for fleet ${fleet.id}`);
 
     res.json({
       success: true,
       data: {
         transactionHash: mintResult.hash,
         amount,
-        newBalance: fleet.remainingFuelBudget,
+        newBalance: newRemaining,
       },
     });
   })
@@ -182,69 +148,39 @@ router.post(
   authorize('fleet_operator', 'admin'),
   [
     param('fleetId').notEmpty(),
-    body('name').trim().notEmpty(),
-    body('phone').isMobilePhone('any'),
+    body('driverId').notEmpty().withMessage('driverId (profile ID) is required'),
     body('vehicleId').notEmpty(),
     body('dailyLimit').isFloat({ min: 0 }),
     body('transactionLimit').isFloat({ min: 0 }),
+    body('weeklyLimit').optional().isFloat({ min: 0 }),
   ],
   asyncHandler(async (req: Request, res: Response) => {
-    const fleet = fleets.get(req.params.fleetId);
+    const fleet = await db.getFleet(req.params.fleetId);
+    if (!fleet) throw new AppError('Fleet not found', 404, 'FLEET_NOT_FOUND');
 
-    if (!fleet) {
-      throw new AppError('Fleet not found', 404, 'FLEET_NOT_FOUND');
-    }
-
-    if (fleet.operatorId !== req.user?.userId && req.user?.role !== 'admin') {
+    if (fleet.operator_id !== req.user!.userId && req.user!.role !== 'admin') {
       throw new AppError('Unauthorized', 403, 'FORBIDDEN');
     }
 
-    const { name, phone, vehicleId, dailyLimit, transactionLimit, allowedStations } = req.body;
+    const { driverId, vehicleId, dailyLimit, transactionLimit, weeklyLimit, allowedStations } = req.body;
 
-    // Create wallet for driver
-    const wallet = stellarService.createWallet();
-
-    const driver = {
-      id: `driver_${Date.now()}`,
-      fleetId: req.params.fleetId,
-      name,
-      phone,
-      vehicleId,
-      walletAddress: wallet.publicKey,
-      walletSecret: wallet.secretKey,
-      spendingLimits: {
-        dailyLimit,
-        transactionLimit,
-        weeklyLimit: dailyLimit * 7,
-        allowedStations: allowedStations || [],
-      },
-      dailySpent: 0,
-      weeklySpent: 0,
-      totalRedemptions: 0,
-      isActive: true,
-      createdAt: new Date().toISOString(),
-    };
-
-    const drivers = fleetDrivers.get(req.params.fleetId) || [];
-    drivers.push(driver);
-    fleetDrivers.set(req.params.fleetId, drivers);
-
-    fleet.driverCount = drivers.length;
-    fleets.set(req.params.fleetId, fleet);
-
-    logger.info(`Driver ${driver.id} added to fleet ${req.params.fleetId}`);
-
-    res.status(201).json({
-      success: true,
-      data: {
-        id: driver.id,
-        name: driver.name,
-        phone: driver.phone,
-        vehicleId: driver.vehicleId,
-        walletAddress: driver.walletAddress,
-        spendingLimits: driver.spendingLimits,
-      },
+    const member = await db.createFleetMember({
+      fleet_id: req.params.fleetId,
+      profile_id: driverId,
+      vehicle_id: vehicleId,
+      daily_limit: dailyLimit,
+      transaction_limit: transactionLimit,
+      weekly_limit: weeklyLimit ?? dailyLimit * 7,
+      daily_spent: 0,
+      weekly_spent: 0,
+      allowed_stations: allowedStations || [],
+      total_redemptions: 0,
+      is_active: true,
     });
+
+    logger.info(`Driver ${driverId} added to fleet ${req.params.fleetId}`);
+
+    res.status(201).json({ success: true, data: member });
   })
 );
 
@@ -258,79 +194,52 @@ router.post(
   [
     param('fleetId').notEmpty(),
     body('distributions').isArray({ min: 1 }),
-    body('distributions.*.driverId').notEmpty(),
+    body('distributions.*.memberId').notEmpty(),
     body('distributions.*.amount').isFloat({ min: 0.01 }),
   ],
   asyncHandler(async (req: Request, res: Response) => {
-    const fleet = fleets.get(req.params.fleetId);
+    const fleet = await db.getFleet(req.params.fleetId);
+    if (!fleet) throw new AppError('Fleet not found', 404, 'FLEET_NOT_FOUND');
 
-    if (!fleet) {
-      throw new AppError('Fleet not found', 404, 'FLEET_NOT_FOUND');
-    }
-
-    if (fleet.operatorId !== req.user?.userId && req.user?.role !== 'admin') {
+    if (fleet.operator_id !== req.user!.userId && req.user!.role !== 'admin') {
       throw new AppError('Unauthorized', 403, 'FORBIDDEN');
     }
 
     const { distributions } = req.body;
-    const drivers = fleetDrivers.get(req.params.fleetId) || [];
-
     const results: any[] = [];
     let totalDistributed = 0;
 
     for (const dist of distributions) {
-      const driver = drivers.find(d => d.id === dist.driverId);
-      
-      if (!driver) {
-        results.push({
-          driverId: dist.driverId,
-          success: false,
-          error: 'Driver not found',
-        });
+      const member = await db.getFleetMember(dist.memberId);
+
+      if (!member) {
+        results.push({ memberId: dist.memberId, success: false, error: 'Member not found' });
         continue;
       }
 
-      if (dist.amount > fleet.remainingFuelBudget) {
-        results.push({
-          driverId: dist.driverId,
-          success: false,
-          error: 'Insufficient fleet balance',
-        });
+      if (dist.amount > (fleet.remaining_fuel_budget || 0)) {
+        results.push({ memberId: dist.memberId, success: false, error: 'Insufficient fleet balance' });
         continue;
       }
 
       try {
-        // Note: In a real implementation, you'd use the fleet's secret key
-        // This is simplified for the example
-        results.push({
-          driverId: dist.driverId,
-          amount: dist.amount,
-          success: true,
-          walletAddress: driver.walletAddress,
-        });
+        await db.updateFleetMemberSpending(dist.memberId, dist.amount, dist.amount);
+        const newRemaining = (fleet.remaining_fuel_budget || 0) - dist.amount;
+        await db.updateFleetBudget(fleet.id!, fleet.total_fuel_budget || 0, newRemaining);
+        fleet.remaining_fuel_budget = newRemaining;
 
+        results.push({ memberId: dist.memberId, amount: dist.amount, success: true });
         totalDistributed += dist.amount;
-        fleet.remainingFuelBudget -= dist.amount;
-      } catch (error) {
-        results.push({
-          driverId: dist.driverId,
-          success: false,
-          error: 'Transfer failed',
-        });
+      } catch {
+        results.push({ memberId: dist.memberId, success: false, error: 'Transfer failed' });
       }
     }
 
-    fleets.set(req.params.fleetId, fleet);
-
-    logger.info(`Distributed ${totalDistributed} FUEL to ${results.filter(r => r.success).length} drivers`);
+    logger.info(`Distributed ${totalDistributed} FUEL to ${results.filter(r => r.success).length} members`);
 
     res.json({
       success: true,
-      data: {
-        totalDistributed,
-        remainingBalance: fleet.remainingFuelBudget,
-        results,
-      },
+      data: { totalDistributed, remainingBalance: fleet.remaining_fuel_budget, results },
     });
   })
 );
@@ -347,47 +256,38 @@ router.get(
     query('period').optional().isIn(['day', 'week', 'month', 'year']),
   ],
   asyncHandler(async (req: Request, res: Response) => {
-    const fleet = fleets.get(req.params.fleetId);
+    const fleet = await db.getFleet(req.params.fleetId);
+    if (!fleet) throw new AppError('Fleet not found', 404, 'FLEET_NOT_FOUND');
 
-    if (!fleet) {
-      throw new AppError('Fleet not found', 404, 'FLEET_NOT_FOUND');
-    }
-
-    if (fleet.operatorId !== req.user?.userId && req.user?.role !== 'admin') {
+    if (fleet.operator_id !== req.user!.userId && req.user!.role !== 'admin') {
       throw new AppError('Unauthorized', 403, 'FORBIDDEN');
     }
 
-    const drivers = fleetDrivers.get(req.params.fleetId) || [];
+    let analytics: any;
+    try {
+      analytics = await db.getFleetAnalytics(req.params.fleetId);
+    } catch {
+      analytics = null;
+    }
 
-    // Mock analytics - in production, aggregate from actual transaction data
-    const analytics = {
-      fleetId: fleet.id,
-      period: req.query.period || 'week',
-      totalBudget: fleet.totalFuelBudget,
-      remainingBudget: fleet.remainingFuelBudget,
-      utilizationRate: fleet.totalFuelBudget > 0 
-        ? ((fleet.totalFuelBudget - fleet.remainingFuelBudget) / fleet.totalFuelBudget * 100).toFixed(2)
-        : 0,
-      driverCount: drivers.length,
-      activeDrivers: drivers.filter(d => d.isActive).length,
-      totalRedemptions: drivers.reduce((sum, d) => sum + d.totalRedemptions, 0),
-      averagePerDriver: drivers.length > 0
-        ? ((fleet.totalFuelBudget - fleet.remainingFuelBudget) / drivers.length).toFixed(2)
-        : 0,
-      topDrivers: drivers
-        .sort((a, b) => b.totalRedemptions - a.totalRedemptions)
-        .slice(0, 5)
-        .map(d => ({
-          id: d.id,
-          name: d.name,
-          redemptions: d.totalRedemptions,
-        })),
-      alerts: [],
-    };
+    const members = await db.getFleetMembers(req.params.fleetId);
+    const utilized = (fleet.total_fuel_budget || 0) - (fleet.remaining_fuel_budget || 0);
 
     res.json({
       success: true,
-      data: analytics,
+      data: {
+        fleetId: fleet.id,
+        period: req.query.period || 'week',
+        totalBudget: fleet.total_fuel_budget,
+        remainingBudget: fleet.remaining_fuel_budget,
+        utilizationRate:
+          (fleet.total_fuel_budget || 0) > 0
+            ? ((utilized / fleet.total_fuel_budget!) * 100).toFixed(2)
+            : '0.00',
+        memberCount: members.length,
+        activeMembers: members.filter(m => m.is_active).length,
+        ...(analytics || {}),
+      },
     });
   })
 );
