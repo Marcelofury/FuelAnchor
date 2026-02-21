@@ -5,6 +5,7 @@ import 'dart:convert';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../core/config/supabase_config.dart';
+import '../../../../core/config/api_config.dart';
 import '../../../../core/utils/logger.dart';
 
 class SettlementScreen extends ConsumerStatefulWidget {
@@ -156,11 +157,8 @@ class _SettlementScreenState extends ConsumerState<SettlementScreen> {
 
         // Call backend settlement API
         final response = await http.post(
-          Uri.parse('http://localhost:3000/api/transactions/settle'),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ${session.accessToken}',
-          },
+          Uri.parse(ApiConfig.settleTransaction),
+          headers: ApiConfig.headers(authToken: session.accessToken),
           body: jsonEncode({
             'date': _selectedDate.toIso8601String(),
             'totalAmount': _totalRevenue,

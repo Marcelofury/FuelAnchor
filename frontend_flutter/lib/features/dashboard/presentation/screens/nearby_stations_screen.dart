@@ -6,6 +6,7 @@ import 'dart:convert';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/utils/logger.dart';
 import '../../../../core/services/supabase_service.dart';
+import '../../../../core/config/api_config.dart';
 
 class NearbyStationsScreen extends ConsumerStatefulWidget {
   const NearbyStationsScreen({super.key});
@@ -67,14 +68,12 @@ class _NearbyStationsScreenState extends ConsumerState<NearbyStationsScreen> {
 
       final response = await http.get(
         Uri.parse(
-          'http://localhost:3000/api/stations/nearby'
+          '${ApiConfig.nearbyStations}'
           '?lat=${position.latitude}'
           '&lng=${position.longitude}'
           '&radius=10',
         ),
-        headers: {
-          'Authorization': 'Bearer ${session.accessToken}',
-        },
+        headers: ApiConfig.headers(authToken: session.accessToken),
       );
 
       if (response.statusCode == 200) {
