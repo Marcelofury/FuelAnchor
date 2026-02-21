@@ -35,31 +35,59 @@ export interface FleetDriverProfile {
   odometer_reading: number;
   fuel_quota_allocated: number;
   fuel_quota_used: number;
+  // Spending limits from fleet_members
+  daily_limit?: number;
+  weekly_limit?: number;
+  transaction_limit?: number;
+  daily_spent?: number;
+  weekly_spent?: number;
   created_at?: string;
 }
 
 export interface MerchantProfile {
-  id: string;
+  id?: string;
   station_id: string;
   station_name: string;
+  address?: string;
+  country?: string;
+  latitude?: number;
+  longitude?: number;
   location_lat?: number;
   location_lng?: number;
-  total_fuel_dispensed: number;
-  total_revenue: number;
+  fuel_types?: any[];
+  geofence_radius_meters?: number;
+  stellar_public_key?: string;
+  is_verified?: boolean;
+  is_active?: boolean;
+  rating?: number;
+  total_fuel_dispensed?: number;
+  total_revenue?: number;
+  total_redemptions?: number;
+  total_volume?: number;
   created_at?: string;
+  updated_at?: string;
 }
 
 export interface Transaction {
   id?: string;
-  blockchain_hash: string;
-  from_user_id: string;
-  to_user_id: string;
+  blockchain_hash?: string;
+  from_user_id?: string;
+  to_user_id?: string;
+  rider_id?: string;
+  merchant_id?: string;
   amount: number;
   fuel_volume?: number;
+  fuel_liters?: number;
+  fuel_type?: string;
   gps_lat?: number;
   gps_lng?: number;
+  latitude?: number;
+  longitude?: number;
+  vehicle_id?: string;
+  transaction_type?: string;
   status: 'pending' | 'completed' | 'failed';
   created_at?: string;
+  updated_at?: string;
 }
 
 export interface FuelQuota {
@@ -69,6 +97,38 @@ export interface FuelQuota {
   quota_amount: number;
   period_start: string;
   period_end: string;
+  created_at?: string;
+}
+
+export interface Fleet {
+  id?: string;
+  name: string;
+  description?: string;
+  country: string;
+  vehicle_count?: number;
+  operator_id: string;
+  stellar_public_key?: string;
+  total_fuel_budget?: number;
+  remaining_fuel_budget?: number;
+  driver_count?: number;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface FleetMember {
+  id?: string;
+  fleet_id: string;
+  profile_id: string;
+  vehicle_id: string;
+  daily_limit: number;
+  transaction_limit: number;
+  weekly_limit: number;
+  daily_spent?: number;
+  weekly_spent?: number;
+  allowed_stations?: string[];
+  total_redemptions?: number;
+  is_active?: boolean;
   created_at?: string;
 }
 
@@ -210,12 +270,25 @@ class DatabaseService {
     this.ensureInitialized();
     const { error } = await this.supabase!
       .rpc('increment_rider_stats', {
-        rider_id: riderId,
-        fuel_amount: fuelPurchased,
+        p_rider_id: riderId,
+        p_fuel_amount: fuelPurchased,
       });
 
     if (error) {
       logger.error('Failed to update rider stats:', error);
+      throw new Error(`Database error: ${error.message}`);
+    }
+  }
+
+  async updateRiderCreditScore(riderId: string, score: number): Promise<void> {
+    this.ensureInitialized();
+    const { error } = await this.supabase!
+      .from('rider_profiles')
+      .update({ credit_score: score })
+      .eq('id', riderId);
+
+    if (error) {
+      logger.error('Failed to update rider credit score:', error);
       throw new Error(`Database error: ${error.message}`);
     }
   }
@@ -320,15 +393,64 @@ class DatabaseService {
     this.ensureInitialized();
     const { error } = await this.supabase!
       .rpc('increment_merchant_stats', {
-        merchant_id: merchantId,
-        fuel_amount: fuelDispensed,
-        revenue_amount: revenue,
+        p_merchant_id: merchantId,
+        p_fuel_dispensed: fuelDispensed,
+        p_revenue: revenue,
       });
 
     if (error) {
       logger.error('Failed to update merchant stats:', error);
       throw new Error(`Database error: ${error.message}`);
     }
+  }
+
+  async getAllMerchants(country?: string, isVerified?: boolean): Promise<MerchantProfile[]> {
+    this.ensureInitialized();
+    let query = this.supabase!
+      .from('merchant_profiles')
+      .select('*')
+      .eq('is_active', true);
+
+    if (country) query = query.eq('country', country);
+    if (isVerified !== undefined) query = query.eq('is_verified', isVerified);
+
+    const { data, error } = await query.order('station_name');
+    if (error) {
+      logger.error('Failed to get merchants:', error);
+      throw new Error(`Database error: ${error.message}`);
+    }
+    return data || [];
+  }
+
+  async getMerchantByStationId(stationId: string): Promise<MerchantProfile | null> {
+    this.ensureInitialized();
+    const { data, error } = await this.supabase!
+      .from('merchant_profiles')
+      .select('*')
+      .eq('station_id', stationId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') return null;
+      throw new Error(`Database error: ${error.message}`);
+    }
+    return data;
+  }
+
+  async updateMerchantProfile(merchantId: string, updates: Partial<MerchantProfile> & Record<string, any>): Promise<MerchantProfile> {
+    this.ensureInitialized();
+    const { data, error } = await this.supabase!
+      .from('merchant_profiles')
+      .update(updates)
+      .eq('id', merchantId)
+      .select()
+      .single();
+
+    if (error) {
+      logger.error('Failed to update merchant profile:', error);
+      throw new Error(`Database error: ${error.message}`);
+    }
+    return data;
   }
 
   async getNearbyMerchants(lat: number, lng: number, radiusKm: number = 10): Promise<MerchantProfile[]> {
@@ -503,6 +625,141 @@ class DatabaseService {
     }
 
     return data || [];
+  }
+
+  // ==================== FLEET MANAGEMENT ====================
+
+  async createFleet(fleet: Fleet): Promise<Fleet> {
+    this.ensureInitialized();
+    const { data, error } = await this.supabase!
+      .from('fleets')
+      .insert(fleet)
+      .select()
+      .single();
+
+    if (error) {
+      logger.error('Failed to create fleet:', error);
+      throw new Error(`Database error: ${error.message}`);
+    }
+    logger.info(`Created fleet: ${data.id}`);
+    return data;
+  }
+
+  async getFleet(fleetId: string): Promise<Fleet | null> {
+    this.ensureInitialized();
+    const { data, error } = await this.supabase!
+      .from('fleets')
+      .select('*')
+      .eq('id', fleetId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') return null;
+      throw new Error(`Database error: ${error.message}`);
+    }
+    return data;
+  }
+
+  async getFleetsByOperator(operatorId: string): Promise<Fleet[]> {
+    this.ensureInitialized();
+    const { data, error } = await this.supabase!
+      .from('fleets')
+      .select('*')
+      .eq('operator_id', operatorId)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      logger.error('Failed to get fleets:', error);
+      throw new Error(`Database error: ${error.message}`);
+    }
+    return data || [];
+  }
+
+  async updateFleetBudget(fleetId: string, totalBudget: number, remainingBudget: number): Promise<void> {
+    this.ensureInitialized();
+    const { error } = await this.supabase!
+      .from('fleets')
+      .update({ total_fuel_budget: totalBudget, remaining_fuel_budget: remainingBudget, updated_at: new Date().toISOString() })
+      .eq('id', fleetId);
+
+    if (error) {
+      logger.error('Failed to update fleet budget:', error);
+      throw new Error(`Database error: ${error.message}`);
+    }
+  }
+
+  async createFleetMember(member: FleetMember): Promise<FleetMember> {
+    this.ensureInitialized();
+    const { data, error } = await this.supabase!
+      .from('fleet_members')
+      .insert(member)
+      .select()
+      .single();
+
+    if (error) {
+      logger.error('Failed to create fleet member:', error);
+      throw new Error(`Database error: ${error.message}`);
+    }
+    return data;
+  }
+
+  async getFleetMembers(fleetId: string): Promise<FleetMember[]> {
+    this.ensureInitialized();
+    const { data, error } = await this.supabase!
+      .from('fleet_members')
+      .select('*, profiles(full_name, phone_number, stellar_public_key)')
+      .eq('fleet_id', fleetId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      logger.error('Failed to get fleet members:', error);
+      throw new Error(`Database error: ${error.message}`);
+    }
+    return data || [];
+  }
+
+  async getFleetMember(memberId: string): Promise<FleetMember | null> {
+    this.ensureInitialized();
+    const { data, error } = await this.supabase!
+      .from('fleet_members')
+      .select('*, profiles(full_name, phone_number, stellar_public_key)')
+      .eq('id', memberId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') return null;
+      throw new Error(`Database error: ${error.message}`);
+    }
+    return data;
+  }
+
+  async updateFleetMemberSpending(memberId: string, addDailySpent: number, addWeeklySpent: number): Promise<void> {
+    this.ensureInitialized();
+    // Use RPC or read-modify-write for atomic increment
+    const { error } = await this.supabase!
+      .rpc('increment_fleet_member_spending', {
+        p_member_id: memberId,
+        p_daily_amount: addDailySpent,
+        p_weekly_amount: addWeeklySpent,
+      });
+
+    if (error) {
+      logger.error('Failed to update fleet member spending:', error);
+      // Non-fatal — don't throw
+    }
+  }
+
+  async getFleetAnalytics(fleetId: string): Promise<any> {
+    this.ensureInitialized();
+    const { data, error } = await this.supabase!
+      .rpc('fleet_analytics', { p_fleet_id: fleetId });
+
+    if (error) {
+      logger.error('Failed to get fleet analytics:', error);
+      throw new Error(`Database error: ${error.message}`);
+    }
+    return data?.[0] || null;
   }
 
   // ==================== ANALYTICS ====================
