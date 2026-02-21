@@ -92,17 +92,36 @@ class StellarService {
             final accountId = keyPair.accountId;
             final account = await _sdk.accounts.account(accountId);
             
-            // Find the FUEL asset balance
-            // For now, return XLM balance (native asset) or default
-            // TODO: Update to search for custom FUEL asset after issuing it
-            final nativeBalance = account.balances.firstWhere(
-              (balance) => balance.assetType == Asset.TYPE_NATIVE,
-              orElse: () => account.balances.first,
-            );
+            // Search for FUEL token balance
+            Balance? fuelBalance;
+            
+            for (final balance in account.balances) {
+              // Check for FUEL token issued by our admin account
+              if (balance.assetType != Asset.TYPE_NATIVE) {
+                // For credit_alphanum4 or credit_alphanum12
+                final assetCode = balance.assetCode;
+                final assetIssuer = balance.assetIssuer;
+                
+                if (assetCode == _fuelAssetCode && assetIssuer == _fuelAssetIssuer) {
+                  fuelBalance = balance;
+                  break;
+                }
+              }
+            }
+            
+            // If FUEL token not found, check if trustline exists
+            if (fuelBalance == null) {
+              AppLogger.info('FUEL token not found in balances. User may need to establish trustline.');
+              return Right(WalletBalance(
+                assetCode: _fuelAssetCode,
+                balance: '0',
+                assetIssuer: _fuelAssetIssuer,
+              ));
+            }
             
             return Right(WalletBalance(
               assetCode: _fuelAssetCode,
-              balance: nativeBalance.balance,
+              balance: fuelBalance.balance,
               assetIssuer: _fuelAssetIssuer,
             ));
           } catch (e, stackTrace) {
