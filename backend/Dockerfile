@@ -1,4 +1,5 @@
 # Backend Dockerfile
+# Build timestamp: 2026-02-21 - Force rebuild for logger fix
 FROM node:20-alpine AS builder
 
 WORKDIR /app
