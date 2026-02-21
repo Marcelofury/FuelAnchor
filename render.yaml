@@ -1,0 +1,99 @@
+services:
+  - type: web
+    name: fuelanchor-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+
+      # Stellar
+      - key: STELLAR_NETWORK
+        value: testnet
+      - key: STELLAR_HORIZON_URL
+        value: https://horizon-testnet.stellar.org
+      - key: STELLAR_SOROBAN_RPC_URL
+        value: https://soroban-testnet.stellar.org:443
+      - key: STELLAR_NETWORK_PASSPHRASE
+        value: "Test SDF Network ; September 2015"
+
+      # Soroban Contract IDs
+      - key: FUEL_TOKEN_CONTRACT_ID
+        value: CCEUEJTBNPLTIRQYCSRL6RZX7Y3KK24RRTBP4ZA4K2XWR5LSWNMMRMZF
+      - key: FUEL_LOCK_CONTRACT_ID
+        value: CDRQE4CCMQP5AFZZQ6MFADSAAGXFQZQVUKX6H66AQW5BUDPDSB32ITNB
+      - key: VOUCHER_REDEMPTION_CONTRACT_ID
+        value: CBRFBUDWNHU2ROA2XN2A4527UIZFKICVKXKZWORLZ2XIOYQBTRXTWJAG
+      - key: CREDIT_SCORE_CONTRACT_ID
+        value: CA5G6454KS2HTIYADEULYDJLABR4AZVP62AQVI5CAJ67DHFHH45WYOBW
+      - key: GEOFENCING_CONTRACT_ID
+        value: CA5ZHEPUCRECX2CFPSKJRDXDAPRM3OS2CTTBMFUPXAZ55RO4MXFVSDRN
+
+      # Stellar Accounts
+      - key: STELLAR_ISSUER
+        value: GCHWQJ4OVQBBOSWEQUXYXFMWVIINIMN2AXWU6FRKCB7YA6NPFFJOJXKX
+      - key: FUEL_TOKEN_ISSUER
+        value: GCHWQJ4OVQBBOSWEQUXYXFMWVIINIMN2AXWU6FRKCB7YA6NPFFJOJXKX
+      - key: FUEL_TOKEN_DISTRIBUTOR
+        value: GCHWQJ4OVQBBOSWEQUXYXFMWVIINIMN2AXWU6FRKCB7YA6NPFFJOJXKX
+
+      # Feature flags
+      - key: ENABLE_CREDIT_SCORING
+        value: "true"
+      - key: ENABLE_GEOFENCING
+        value: "true"
+      - key: ENABLE_MOBILE_MONEY
+        value: "true"
+      - key: ENABLE_USSD
+        value: "false"
+
+      # Logging
+      - key: LOG_LEVEL
+        value: info
+
+      # -----------------------------------------------
+      # SECRETS — set these manually in Render dashboard
+      # (never put real values in this file)
+      # -----------------------------------------------
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: DISTRIBUTOR_SECRET_KEY
+        sync: false
+      - key: WEBHOOK_SECRET
+        sync: false
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: MPESA_CONSUMER_KEY
+        sync: false
+      - key: MPESA_CONSUMER_SECRET
+        sync: false
+      - key: MPESA_SHORTCODE
+        sync: false
+      - key: MPESA_PASSKEY
+        sync: false
+      - key: MPESA_CALLBACK_URL
+        sync: false
+      - key: MTN_API_KEY
+        sync: false
+      - key: MTN_API_SECRET
+        sync: false
+      - key: MTN_SUBSCRIPTION_KEY
+        sync: false
+      - key: AIRTEL_CLIENT_ID
+        sync: false
+      - key: AIRTEL_CLIENT_SECRET
+        sync: false
+      - key: AIRTEL_CALLBACK_URL
+        sync: false
