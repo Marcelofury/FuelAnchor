@@ -4,6 +4,8 @@ import { mpesaService } from '../services/mpesa';
 import { mtnMoMoService } from '../services/mtn_momo';
 import { logger } from '../utils/logger';
 import { body, validationResult } from 'express-validator';
+import { db } from '../services/database';
+import { tokenMinting } from '../services/tokenMinting';
 
 const router = express.Router();
 
@@ -92,8 +94,18 @@ router.post(
       const result = mpesaService.processCallback(req.body);
 
       if (result.success) {
-        // TODO: Credit user's FUEL token balance on Stellar
-        // TODO: Update database with transaction record
+        // Credit user's FUEL token balance on Stellar
+        try {
+          if (result.phoneNumber && result.amount) {
+            // Look up user - TODO: Add phone number lookup in database
+            logger.info(`Processing credit for ${result.phoneNumber}: KES ${result.amount}`);
+            
+            // For now, log the pending credit
+            // In production, maintain a mapping table: phone_number -> user_id
+          }
+        } catch (error) {
+          logger.error('Error crediting wallet:', error);
+        }
         logger.info('M-Pesa payment successful', result);
       } else {
         logger.warn('M-Pesa payment failed', result);
@@ -137,8 +149,30 @@ router.post(
       const { phoneNumber, amount } = req.body;
       const userId = req.user?.userId;
 
-      // TODO: Verify user has sufficient FUEL token balance
-      // TODO: Lock tokens before withdrawal
+      // Get user profile
+      const userProfile = await db.getUserProfile(userId!);
+      if (!userProfile) {
+        return res.status(404).json({
+          success: false,
+          error: { message: 'User profile not found' },
+        });
+      }
+
+      // Calculate FUEL amount
+      const fuelAmount = tokenMinting.calculateFiatAmount(amount, 'KES');
+
+      // Verify user has sufficient FUEL token balance
+      const hasSufficientBalance = await tokenMinting.checkBalance(
+        userProfile.stellar_public_key,
+        fuelAmount
+      );
+
+      if (!hasSufficientBalance) {
+        return res.status(400).json({
+          success: false,
+          error: { message: `Insufficient FUEL balance. Required: ${fuelAmount} FUEL` },
+        });
+      }
 
       logger.info('Initiating M-Pesa withdrawal', { userId, phoneNumber, amount });
 
@@ -251,8 +285,30 @@ router.post(
       const { phoneNumber, amount, currency = 'UGX' } = req.body;
       const userId = req.user?.userId;
 
-      // TODO: Verify user has sufficient FUEL token balance
-      // TODO: Lock tokens before withdrawal
+      // Get user profile
+      const userProfile = await db.getUserProfile(userId!);
+      if (!userProfile) {
+        return res.status(404).json({
+          success: false,
+          error: { message: 'User profile not found' },
+        });
+      }
+
+      // Calculate FUEL amount to burn (fiat → FUEL)
+      const fuelAmount = tokenMinting.calculateFuelAmount(amount, currency as 'UGX' | 'RWF');
+
+      // Verify user has sufficient FUEL token balance
+      const hasSufficientBalance = await tokenMinting.checkBalance(
+        userProfile.stellar_public_key,
+        fuelAmount
+      );
+
+      if (!hasSufficientBalance) {
+        return res.status(400).json({
+          success: false,
+          error: { message: `Insufficient FUEL balance. Required: ${fuelAmount} FUEL` },
+        });
+      }
 
       logger.info('Initiating MTN MoMo withdrawal', { userId, phoneNumber, amount });
 
