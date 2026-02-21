@@ -180,10 +180,10 @@ class _RelworxPaymentWidgetState extends ConsumerState<RelworxPaymentWidget> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.accent.withOpacity(0.1),
+                    color: AppColors.electricGreen.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.phone_android, color: AppColors.accent),
+                  child: const Icon(Icons.phone_android, color: AppColors.electricGreen),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -219,9 +219,9 @@ class _RelworxPaymentWidgetState extends ConsumerState<RelworxPaymentWidget> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.05),
+                color: AppColors.navy.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.primary.withOpacity(0.1)),
+                border: Border.all(color: AppColors.navy.withOpacity(0.1)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -235,7 +235,7 @@ class _RelworxPaymentWidgetState extends ConsumerState<RelworxPaymentWidget> {
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.accent,
+                      color: AppColors.electricGreen,
                     ),
                   ),
                 ],
@@ -338,7 +338,7 @@ class _RelworxPaymentWidgetState extends ConsumerState<RelworxPaymentWidget> {
             ElevatedButton(
               onPressed: _isProcessing ? null : _processPayment,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accent,
+                backgroundColor: AppColors.electricGreen,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -396,7 +396,7 @@ class _PaymentPendingDialogState extends State<_PaymentPendingDialog> {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const CircularProgressIndicator(color: AppColors.accent),
+          const CircularProgressIndicator(color: AppColors.electricGreen),
           const SizedBox(height: 20),
           Text(
             'Check your phone (${widget.phone})',
