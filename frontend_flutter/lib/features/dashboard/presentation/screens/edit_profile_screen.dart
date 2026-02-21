@@ -62,8 +62,19 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
     if (SupabaseConfig.isConfigured) {
       try {
-        // TODO: Update profile in Supabase
-        await Future.delayed(const Duration(seconds: 1));
+        final supabase = SupabaseService.client;
+        final userId = supabase.auth.currentUser?.id;
+
+        if (userId == null) {
+          throw Exception('No user logged in');
+        }
+
+        // Update profile in Supabase
+        await supabase.from('profiles').update({
+          'full_name': _nameController.text,
+          'phone': _phoneController.text,
+          'updated_at': DateTime.now().toIso8601String(),
+        }).eq('id', userId);
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
