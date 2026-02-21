@@ -35,8 +35,14 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
 
     if (SupabaseConfig.isConfigured) {
       try {
-        // TODO: Implement password change with Supabase
-        await Future.delayed(const Duration(seconds: 1));
+        final supabase = SupabaseService.client;
+        
+        // Update password in Supabase Auth
+        await supabase.auth.updateUser(
+          UserAttributes(
+            password: _newPasswordController.text,
+          ),
+        );
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
