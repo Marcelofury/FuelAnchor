@@ -64,6 +64,12 @@ export const config = {
   airtelEncryptedPin: process.env.AIRTEL_ENCRYPTED_PIN || '',
   airtelCallbackUrl: process.env.AIRTEL_CALLBACK_URL || '',
 
+  // Relworx Payment Gateway (MTN & Airtel Uganda)
+  relworxApiKey: process.env.RELWORX_API_KEY || '',
+  relworxAccountNo: process.env.RELWORX_ACCOUNT_NO || '',
+  relworxApiUrl: process.env.RELWORX_API_URL || 'https://payments.relworx.com/api',
+  relworxCallbackUrl: process.env.RELWORX_CALLBACK_URL || '',
+
   // SMS Gateway (Africa's Talking)
   atApiKey: process.env.AT_API_KEY || '',
   atUsername: process.env.AT_USERNAME || '',
