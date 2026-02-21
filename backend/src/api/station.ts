@@ -135,6 +135,81 @@ router.get(
 );
 
 /**
+ * Get nearby fuel stations based on GPS location
+ */
+router.get(
+  '/nearby',
+  authenticate,
+  [
+    query('lat').isFloat({ min: -90, max: 90 }),
+    query('lng').isFloat({ min: -180, max: 180 }),
+    query('radius').optional().isInt({ min: 1, max: 100 }).default(10),
+  ],
+  asyncHandler(async (req: Request, res: Response) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      throw new AppError('Validation failed', 400, 'VALIDATION_ERROR');
+    }
+
+    const userLat = parseFloat(req.query.lat as string);
+    const userLng = parseFloat(req.query.lng as string);
+    const radiusKm = parseInt(req.query.radius as string) || 10;
+
+    // Haversine distance calculation
+    const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+      const R = 6371; // Earth's radius in km
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = 
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    };
+
+    const nearbyStations = [];
+
+    for (const [, station] of stations) {
+      if (!station.isActive) continue;
+
+      const distance = calculateDistance(
+        userLat,
+        userLng,
+        station.location.latitude,
+        station.location.longitude
+      );
+
+      if (distance <= radiusKm) {
+        nearbyStations.push({
+          id: station.id,
+          name: station.name,
+          address: station.address,
+          location: station.location,
+          fuelTypes: station.fuelTypes,
+          rating: station.rating,
+          distance: Math.round(distance * 100) / 100, // Round to 2 decimal places
+          isVerified: station.isVerified,
+        });
+      }
+    }
+
+    // Sort by distance
+    nearbyStations.sort((a, b) => a.distance - b.distance);
+
+    res.json({
+      success: true,
+      data: {
+        stations: nearbyStations,
+        count: nearbyStations.length,
+        searchRadius: radiusKm,
+        userLocation: { latitude: userLat, longitude: userLng },
+      },
+    });
+  })
+);
+
+/**
  * Get station by ID
  */
 router.get(
