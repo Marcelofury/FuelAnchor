@@ -21,6 +21,7 @@ import webhookRoutes from './api/webhooks';
 import mobileMoneyRoutes from './api/mobile_money';
 import analyticsRoutes from './api/analytics';
 import sep31Routes from './api/sep31';
+import relworxRoutes from './api/relworx';
 import docsRoutes from './api/docs';
 
 const app = express();
@@ -95,6 +96,7 @@ app.use('/api/v1/webhooks', webhookLimiter, webhookRoutes);
 app.use('/api/v1/mobile-money', transactionLimiter, mobileMoneyRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
 app.use('/api/v1/sep31', transactionLimiter, sep31Routes);
+app.use('/api/v1/relworx', transactionLimiter, relworxRoutes);
 
 // API Documentation
 app.use('/api/docs', docsRoutes);
