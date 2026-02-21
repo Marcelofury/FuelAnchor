@@ -111,6 +111,18 @@ if (process.env.NODE_ENV !== 'test' || require.main === module) {
     logger.info(`🚀 FuelAnchor API server running on port ${PORT}`);
     logger.info(`📍 Environment: ${config.nodeEnv}`);
     logger.info(`🌐 Stellar Network: ${config.stellarNetwork}`);
+
+    // Keep-alive ping for Render free tier (prevents spin-down after 15 min inactivity)
+    // Render sets RENDER_EXTERNAL_URL automatically on deployed instances
+    if (process.env.RENDER_EXTERNAL_URL) {
+      const keepAliveUrl = `${process.env.RENDER_EXTERNAL_URL}/health`;
+      setInterval(() => {
+        fetch(keepAliveUrl)
+          .then(() => logger.debug('Keep-alive ping sent'))
+          .catch((err) => logger.warn('Keep-alive ping failed:', err.message));
+      }, 14 * 60 * 1000); // every 14 minutes
+      logger.info(`⏰ Keep-alive enabled: ${keepAliveUrl}`);
+    }
   });
 }
 
