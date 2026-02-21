@@ -103,13 +103,15 @@ app.use('/api/docs', docsRoutes);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-// Start server
+// Start server (only when not imported by test runner)
 const PORT = config.port || 3000;
 
-app.listen(PORT, () => {
-  logger.info(`🚀 FuelAnchor API server running on port ${PORT}`);
-  logger.info(`📍 Environment: ${config.nodeEnv}`);
-  logger.info(`🌐 Stellar Network: ${config.stellarNetwork}`);
-});
+if (process.env.NODE_ENV !== 'test' || require.main === module) {
+  app.listen(PORT, () => {
+    logger.info(`🚀 FuelAnchor API server running on port ${PORT}`);
+    logger.info(`📍 Environment: ${config.nodeEnv}`);
+    logger.info(`🌐 Stellar Network: ${config.stellarNetwork}`);
+  });
+}
 
 export default app;
