@@ -8,11 +8,11 @@
 #![no_std]
 
 use soroban_sdk::{
-    contract, contractimpl, contracttype, Address, BytesN, Env, Map, String, Symbol, Vec,
+    contract, contractimpl, contracttype, Address, BytesN, Env, String, Symbol, Vec,
 };
 
 /// Geographic point with micro-degree precision
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 #[contracttype]
 pub struct GeoPoint {
     /// Latitude in micro-degrees (actual_degrees * 1_000_000)
@@ -269,7 +269,7 @@ impl Geofencing {
             };
         }
 
-        let distance = Self::calculate_distance(&zone.center, &point);
+        let distance = Self::calculate_distance(zone.center, point);
         let is_valid = distance <= zone.radius_meters;
 
         ValidationResult {
@@ -325,7 +325,7 @@ impl Geofencing {
     }
 
     /// Calculate distance between two points (in meters)
-    pub fn calculate_distance(point1: &GeoPoint, point2: &GeoPoint) -> u32 {
+    pub fn calculate_distance(point1: GeoPoint, point2: GeoPoint) -> u32 {
         // Simplified Euclidean distance calculation
         // For more accuracy, implement full Haversine formula
         let lat_diff = (point1.lat - point2.lat).abs();
@@ -353,7 +353,7 @@ impl Geofencing {
 
         if line_len_sq == 0 {
             // Line is a point
-            return Self::calculate_distance(point, line_start);
+            return Self::calculate_distance(*point, *line_start);
         }
 
         // Vector from line_start to point
@@ -369,7 +369,7 @@ impl Geofencing {
             lng: line_start.lng + (line_dx * t / 1000),
         };
 
-        Self::calculate_distance(point, &closest)
+        Self::calculate_distance(*point, closest)
     }
 
     /// Integer square root helper
@@ -423,7 +423,7 @@ impl Geofencing {
         for i in 0..zone_ids.len() {
             let zone_id = zone_ids.get(i).unwrap();
             if let Some(zone) = env.storage().persistent().get::<DataKey, CircularZone>(&DataKey::CircularZone(zone_id.clone())) {
-                let distance = Self::calculate_distance(&zone.center, &point);
+                let distance = Self::calculate_distance(zone.center, point);
                 if distance <= zone.radius_meters {
                     return true;
                 }
