@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/enums/user_role.dart';
-import '../../../../core/error/failure.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../core/config/supabase_config.dart';
 import '../../providers/providers.dart';
