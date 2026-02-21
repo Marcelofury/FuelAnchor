@@ -70,6 +70,7 @@ npm run dev
 - [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md) - Detailed overview
 - [SUPABASE_SETUP.md](SUPABASE_SETUP.md) - Database setup
 
+<<<<<<< HEAD
 ## License
 
 MIT License - See [LICENSE](LICENSE)
@@ -77,3 +78,5 @@ MIT License - See [LICENSE](LICENSE)
 ---
 
 **Built for East Africa** 🚀 Powered by Stellar ⭐
+=======
+>>>>>>> 4543ed501007b4e835d85fe7bc7e074bc083c172
