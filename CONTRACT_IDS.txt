@@ -1,0 +1,56 @@
+FuelAnchor Contract IDs - Stellar Testnet
+Generated: 2026-02-21
+
+====================================================
+DEPLOYED CONTRACT IDS
+====================================================
+
+FUEL_TOKEN_CONTRACT_ID=CCEUEJTBNPLTIRQYCSRL6RZX7Y3KK24RRTBP4ZA4K2XWR5LSWNMMRMZF
+FUEL_LOCK_CONTRACT_ID=CDRQE4CCMQP5AFZZQ6MFADSAAGXFQZQVUKX6H66AQW5BUDPDSB32ITNB
+VOUCHER_REDEMPTION_CONTRACT_ID=CBRFBUDWNHU2ROA2XN2A4527UIZFKICVKXKZWORLZ2XIOYQBTRXTWJAG
+CREDIT_SCORE_CONTRACT_ID=CA5G6454KS2HTIYADEULYDJLABR4AZVP62AQVI5CAJ67DHFHH45WYOBW
+GEOFENCING_CONTRACT_ID=CA5ZHEPUCRECX2CFPSKJRDXDAPRM3OS2CTTBMFUPXAZ55RO4MXFVSDRN
+
+Admin Address: GCHWQJ4OVQBBOSWEQUXYXFMWVIINIMN2AXWU6FRKCB7YA6NPFFJOJXKX
+Network: Stellar Testnet
+RPC URL: https://soroban-testnet.stellar.org:443
+
+====================================================
+EXPLORERS LINKS
+====================================================
+
+Fuel Token:
+https://stellar.expert/explorer/testnet/contract/CCEUEJTBNPLTIRQYCSRL6RZX7Y3KK24RRTBP4ZA4K2XWR5LSWNMMRMZF
+
+Fuel Lock:
+https://stellar.expert/explorer/testnet/contract/CDRQE4CCMQP5AFZZQ6MFADSAAGXFQZQVUKX6H66AQW5BUDPDSB32ITNB
+
+Voucher Redemption:
+https://stellar.expert/explorer/testnet/contract/CBRFBUDWNHU2ROA2XN2A4527UIZFKICVKXKZWORLZ2XIOYQBTRXTWJAG
+
+Credit Score:
+https://stellar.expert/explorer/testnet/contract/CA5G6454KS2HTIYADEULYDJLABR4AZVP62AQVI5CAJ67DHFHH45WYOBW
+
+Geofencing:
+https://stellar.expert/explorer/testnet/contract/CA5ZHEPUCRECX2CFPSKJRDXDAPRM3OS2CTTBMFUPXAZ55RO4MXFVSDRN
+
+====================================================
+NEXT STEPS
+====================================================
+
+1. Update Flutter app (frontend_flutter/lib/features/blockchain/data/services/stellar_service.dart):
+   
+   Line 17-18:
+   static const String _fuelAssetIssuer = 'GCHWQJ4OVQBBOSWEQUXYXFMWVIINIMN2AXWU6FRKCB7YA6NPFFJOJXKX';
+   static const String _sorobanContractId = 'CDRQE4CCMQP5AFZZQ6MFADSAAGXFQZQVUKX6H66AQW5BUDPDSB32ITNB';
+
+2. Update backend/.env with these contract IDs (already created by script)
+
+3. Get your admin secret key:
+   stellar keys show admin
+
+4. Add the secret key to backend/.env:
+   STELLAR_ADMIN_SECRET=S...
+
+5. Test contract invocation:
+   stellar contract invoke --id CCEUEJTBNPLTIRQYCSRL6RZX7Y3KK24RRTBP4ZA4K2XWR5LSWNMMRMZF --source admin --network testnet -- name
