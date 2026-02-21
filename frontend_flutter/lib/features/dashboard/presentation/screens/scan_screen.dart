@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/utils/logger.dart';
+import '../../../blockchain/data/services/stellar_service.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ScanScreen extends ConsumerStatefulWidget {
   const ScanScreen({super.key});
@@ -216,19 +220,85 @@ class _PaymentConfirmationDialogState extends State<_PaymentConfirmationDialog> 
 
     setState(() => _isProcessing = true);
 
-    // TODO: Process payment via Stellar blockchain
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      // Get current location
+      Position? position;
+      try {
+        position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+        );
+      } catch (e) {
+        AppLogger.error('Failed to get location', e);
+        // Use default location if GPS fails
+        position = Position(
+          latitude: -1.286389,
+          longitude: 36.817223,
+          timestamp: DateTime.now(),
+          accuracy: 0,
+          altitude: 0,
+          heading: 0,
+          speed: 0,
+          speedAccuracy: 0,
+          altitudeAccuracy: 0,
+          headingAccuracy: 0,
+        );
+      }
 
-    setState(() => _isProcessing = false);
+      final gpsData = {
+        'latitude': position.latitude,
+        'longitude': position.longitude,
+      };
 
-    if (mounted) {
-      Navigator.pop(context, true);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Payment processed successfully!'),
-          backgroundColor: AppColors.electricGreen,
-        ),
+      // Initialize Stellar service
+      final stellarService = StellarService(
+        secureStorage: const FlutterSecureStorage(),
+        useTestnet: true,
       );
+
+      // Process payment via blockchain
+      final result = await stellarService.payMerchant(
+        amount: _amountController.text,
+        merchantId: widget.vehicleId, // This is the merchant's Stellar address from QR code
+        driverGps: gpsData,
+      );
+
+      setState(() => _isProcessing = false);
+
+      result.fold(
+        (failure) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Payment failed: ${failure.message}'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        },
+        (txHash) {
+          if (mounted) {
+            Navigator.pop(context, true);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Payment successful! TX: ${txHash.substring(0, 8)}...'),
+                backgroundColor: AppColors.electricGreen,
+                duration: const Duration(seconds: 5),
+              ),
+            );
+          }
+        },
+      );
+    } catch (e) {
+      setState(() => _isProcessing = false);
+      AppLogger.error('Payment error', e);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Payment failed: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
