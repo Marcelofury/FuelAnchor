@@ -1045,6 +1045,104 @@ class DatabaseService {
     return distribution;
   }
 
+  // ==================== RELWORX PAYMENTS ====================
+
+  async createRelworxPayment(data: {
+    user_id: string;
+    amount: number;
+    currency: string;
+    type: 'collection' | 'disbursement';
+    status: string;
+    transaction_ref: string;
+    internal_reference?: string;
+    phone_number: string;
+    provider?: string;
+    description?: string;
+    metadata?: Record<string, any>;
+  }): Promise<any> {
+    this.ensureInitialized();
+    const { data: record, error } = await this.supabase!
+      .from('relworx_payments')
+      .insert(data)
+      .select()
+      .single();
+
+    if (error) {
+      logger.error('Failed to create relworx payment:', error);
+      throw new Error(`Database error: ${error.message}`);
+    }
+    return record;
+  }
+
+  async getRelworxPayment(transactionRef: string, userId?: string): Promise<any> {
+    this.ensureInitialized();
+    let query = this.supabase!
+      .from('relworx_payments')
+      .select('*')
+      .eq('transaction_ref', transactionRef);
+
+    if (userId) query = query.eq('user_id', userId);
+
+    const { data, error } = await query.single();
+    if (error && error.code !== 'PGRST116') {
+      logger.error('Failed to get relworx payment:', error);
+      throw new Error(`Database error: ${error.message}`);
+    }
+    return data || null;
+  }
+
+  async getRelworxPaymentByRef(customerRef: string): Promise<any> {
+    this.ensureInitialized();
+    const { data, error } = await this.supabase!
+      .from('relworx_payments')
+      .select('*')
+      .eq('transaction_ref', customerRef)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      logger.error('Failed to get relworx payment by ref:', error);
+      throw new Error(`Database error: ${error.message}`);
+    }
+    return data || null;
+  }
+
+  async updateRelworxPaymentStatus(
+    id: string,
+    status: string,
+    extra?: { provider_transaction_id?: string; completed_at?: string }
+  ): Promise<void> {
+    this.ensureInitialized();
+    const updates: Record<string, any> = { status };
+    if (extra?.provider_transaction_id) updates.provider_transaction_id = extra.provider_transaction_id;
+    if (extra?.completed_at) updates.completed_at = extra.completed_at;
+
+    const { error } = await this.supabase!
+      .from('relworx_payments')
+      .update(updates)
+      .eq('id', id);
+
+    if (error) {
+      logger.error('Failed to update relworx payment status:', error);
+      throw new Error(`Database error: ${error.message}`);
+    }
+  }
+
+  async getPendingRelworxPayments(): Promise<any[]> {
+    this.ensureInitialized();
+    const { data, error } = await this.supabase!
+      .from('relworx_payments')
+      .select('*')
+      .eq('status', 'pending')
+      .lt('created_at', new Date(Date.now() - 2 * 60 * 1000).toISOString()) // older than 2 min
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      logger.error('Failed to get pending relworx payments:', error);
+      throw new Error(`Database error: ${error.message}`);
+    }
+    return data || [];
+  }
+
   // ==================== HEALTH CHECK ====================
 
   async healthCheck(): Promise<boolean> {
