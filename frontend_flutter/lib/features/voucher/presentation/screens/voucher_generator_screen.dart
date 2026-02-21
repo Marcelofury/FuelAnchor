@@ -92,7 +92,7 @@ class _VoucherGeneratorScreenState
     return Scaffold(
       appBar: AppBar(
         title: const Text('Generate Fuel Voucher'),
-        backgroundColor: AppColors.primary,
+        backgroundColor: AppColors.navy,
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
@@ -106,14 +106,14 @@ class _VoucherGeneratorScreenState
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: AppColors.navy.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                  border: Border.all(color: AppColors.navy.withOpacity(0.3)),
                 ),
                 child: Row(
                   children: [
                     Icon(Icons.confirmation_number, 
-                      color: AppColors.primary, 
+                      color: AppColors.navy, 
                       size: 32
                     ),
                     const SizedBox(width: 12),
@@ -126,7 +126,7 @@ class _VoucherGeneratorScreenState
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w700,
-                              color: AppColors.primary,
+                              color: AppColors.navy,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -153,7 +153,7 @@ class _VoucherGeneratorScreenState
                   labelText: 'Voucher Amount (FUEL)',
                   hintText: 'Enter amount in FUEL tokens',
                   prefixIcon: Icon(Icons.account_balance_wallet, 
-                    color: AppColors.primary
+                    color: AppColors.navy
                   ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -164,7 +164,7 @@ class _VoucherGeneratorScreenState
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.primary, width: 2),
+                    borderSide: BorderSide(color: AppColors.navy, width: 2),
                   ),
                 ),
                 validator: (value) {
@@ -186,7 +186,7 @@ class _VoucherGeneratorScreenState
                 decoration: InputDecoration(
                   labelText: 'Driver ID / Public Key',
                   hintText: 'Enter driver\'s Stellar address',
-                  prefixIcon: Icon(Icons.person, color: AppColors.primary),
+                  prefixIcon: Icon(Icons.person, color: AppColors.navy),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -196,7 +196,7 @@ class _VoucherGeneratorScreenState
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.primary, width: 2),
+                    borderSide: BorderSide(color: AppColors.navy, width: 2),
                   ),
                 ),
                 validator: (value) {
@@ -215,7 +215,7 @@ class _VoucherGeneratorScreenState
                 decoration: InputDecoration(
                   label: const Text('Notes (Optional)'),
                   hintText: 'Add notes about this voucher',
-                  prefixIcon: Icon(Icons.note, color: AppColors.primary),
+                  prefixIcon: Icon(Icons.note, color: AppColors.navy),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -225,7 +225,7 @@ class _VoucherGeneratorScreenState
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.primary, width: 2),
+                    borderSide: BorderSide(color: AppColors.navy, width: 2),
                   ),
                 ),
               ),
@@ -237,7 +237,7 @@ class _VoucherGeneratorScreenState
                 child: ElevatedButton(
                   onPressed: _isGenerating ? null : _generateVoucher,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: AppColors.navy,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -332,7 +332,7 @@ class _VoucherGeneratorScreenState
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                             fontFamily: 'monospace',
-                            color: AppColors.primary,
+                            color: AppColors.navy,
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -360,7 +360,7 @@ class _VoucherGeneratorScreenState
                               label: const Text('New Voucher'),
                               style: OutlinedButton.styleFrom(
                                 padding: const EdgeInsets.all(12),
-                                side: BorderSide(color: AppColors.primary),
+                                side: BorderSide(color: AppColors.navy),
                               ),
                             ),
                           ),
@@ -373,7 +373,7 @@ class _VoucherGeneratorScreenState
                               icon: const Icon(Icons.share),
                               label: const Text('Share'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
+                                backgroundColor: AppColors.navy,
                                 foregroundColor: Colors.white,
                                 padding: const EdgeInsets.all(12),
                               ),
