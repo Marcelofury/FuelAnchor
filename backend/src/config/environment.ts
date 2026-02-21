@@ -11,6 +11,11 @@ export const config = {
   // Database
   databaseUrl: process.env.DATABASE_URL || 'postgresql://localhost:5432/fuelanchor',
 
+  // Supabase
+  supabaseUrl: process.env.SUPABASE_URL || '',
+  supabaseAnonKey: process.env.SUPABASE_ANON_KEY || '',
+  supabaseServiceKey: process.env.SUPABASE_SERVICE_KEY || '',
+
   // Redis
   redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
 
