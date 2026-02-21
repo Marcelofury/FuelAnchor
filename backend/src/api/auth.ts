@@ -15,9 +15,6 @@ import { logger } from '../utils/logger';
 
 const router = Router();
 
-// In-memory auth storage (password hashes) - Consider moving to Supabase auth
-const authStore: Map<string, { email: string; passwordHash: string; userId: string }> = new Map();
-
 /**
  * Register a new user
  */
@@ -38,8 +35,8 @@ router.post(
 
     const { email, password, name, phone, role } = req.body;
 
-    // Check if user exists
-    const existingAuth = authStore.get(email);
+    // Check if user exists (by email in DB)
+    const existingAuth = await db.getUserByEmail(email);
     if (existingAuth) {
       throw new AppError('User already exists', 409, 'USER_EXISTS');
     }
@@ -101,12 +98,8 @@ router.post(
         });
       }
 
-      // Store auth credentials
-      authStore.set(email, {
-        email,
-        passwordHash: hashedPassword,
-        userId: userProfile.id,
-      });
+      // Persist auth credentials (email + bcrypt hash) to profiles table
+      await db.saveUserAuth(userProfile.id, email, hashedPassword);
 
       // Generate JWT
       const token = jwt.sign(
@@ -139,8 +132,6 @@ router.post(
         },
       });
     } catch (error: any) {
-      // Rollback auth store if database fails
-      authStore.delete(email);
       logger.error('User registration failed:', error);
       throw new AppError('Failed to create user profile', 500, 'REGISTRATION_FAILED');
     }
@@ -164,18 +155,19 @@ router.post(
 
     const { email, password } = req.body;
 
-    const auth = authStore.get(email);
-    if (!auth) {
+    // Lookup by email stored in profiles table
+    const authRecord = await db.getUserByEmail(email);
+    if (!authRecord || !authRecord.password_hash) {
       throw new AppError('Invalid credentials', 401, 'INVALID_CREDENTIALS');
     }
 
-    const isPasswordValid = await bcrypt.compare(password, auth.passwordHash);
+    const isPasswordValid = await bcrypt.compare(password, authRecord.password_hash);
     if (!isPasswordValid) {
       throw new AppError('Invalid credentials', 401, 'INVALID_CREDENTIALS');
     }
 
-    // Get user profile from database
-    const userProfile = await db.getUserProfile(auth.userId);
+    // User profile already loaded from getUserByEmail
+    const userProfile = authRecord;
     if (!userProfile) {
       throw new AppError('User profile not found', 404, 'USER_NOT_FOUND');
     }
