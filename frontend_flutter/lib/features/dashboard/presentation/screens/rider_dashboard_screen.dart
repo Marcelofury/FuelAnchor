@@ -4,8 +4,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../../core/utils/responsive.dart';
-import '../../../auth/providers/providers.dart';
 import '../../../wallet/providers/wallet_providers.dart';
 import '../../../payment/providers/payment_providers.dart';
 
