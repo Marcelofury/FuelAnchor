@@ -3,9 +3,9 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { query, validationResult } from 'express-validator';
+import { query, body, validationResult } from 'express-validator';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
-import { authenticate } from '../middleware/auth';
+import { authenticate, authorize } from '../middleware/auth';
 import stellarService from '../services/stellar';
 
 const router = Router();
@@ -69,6 +69,163 @@ router.get(
 );
 
 /**
+ * Initiate a new fuel payment transaction
+ */
+router.post(
+  '/initiate',
+  authenticate,
+  [
+    body('merchantAddress').trim().notEmpty(),
+    body('amount').isNumeric(),
+    body('latitude').isFloat({ min: -90, max: 90 }),
+    body('longitude').isFloat({ min: -180, max: 180 }),
+    body('memo').optional().trim(),
+  ],
+  asyncHandler(async (req: Request, res: Response) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      throw new AppError('Validation failed', 400, 'VALIDATION_ERROR');
+    }
+
+    const { merchantAddress, amount, latitude, longitude, memo } = req.body;
+    const driverAddress = req.user?.walletAddress;
+
+    if (!driverAddress) {
+      throw new AppError('Wallet address not found', 400, 'WALLET_MISSING');
+    }
+
+    // Build transaction for client to sign
+    const transactionData = {
+      contractId: process.env.FUEL_LOCK_CONTRACT_ID,
+      function: 'pay_merchant',
+      parameters: {
+        driver: driverAddress,
+        merchant: merchantAddress,
+        amount: amount,
+        driver_gps: [latitude * 1000000, longitude * 1000000], // Convert to micro-degrees
+      },
+      memo: memo || `Payment to ${merchantAddress.substring(0, 8)}`,
+    };
+
+    res.json({
+      success: true,
+      data: {
+        transaction: transactionData,
+        message: 'Transaction prepared. Sign and submit from client.',
+      },
+    });
+  })
+);
+
+/**
+ * Verify and record a submitted transaction
+ */
+router.post(
+  '/verify',
+  authenticate,
+  [
+    body('transactionHash').trim().notEmpty(),
+    body('merchantAddress').trim().notEmpty(),
+    body('amount').isNumeric(),
+  ],
+  asyncHandler(async (req: Request, res: Response) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      throw new AppError('Validation failed', 400, 'VALIDATION_ERROR');
+    }
+
+    const { transactionHash, merchantAddress, amount } = req.body;
+
+    // Verify transaction on Stellar network
+    try {
+      const txDetails = await stellarService.getTransactionDetails(transactionHash);
+      
+      if (!txDetails.successful) {
+        throw new AppError('Transaction failed on blockchain', 400, 'TX_FAILED');
+      }
+
+      // Record in database (Supabase) - TODO: Add database integration
+      const transactionRecord = {
+        hash: transactionHash,
+        driverId: req.user?.userId,
+        merchantAddress,
+        amount: parseFloat(amount),
+        status: 'confirmed',
+        timestamp: new Date().toISOString(),
+      };
+
+      res.json({
+        success: true,
+        data: {
+          transaction: transactionRecord,
+          blockchainConfirmed: true,
+        },
+      });
+    } catch (error: any) {
+      throw new AppError(
+        error.message || 'Transaction verification failed',
+        400,
+        'VERIFICATION_FAILED'
+      );
+    }
+  })
+);
+
+/**
+ * Get pending transactions for settlement (merchant view)
+ */
+router.get(
+  '/pending',
+  authenticate,
+  authorize('station_owner', 'merchant'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const merchantAddress = req.user?.walletAddress;
+
+    if (!merchantAddress) {
+      throw new AppError('Wallet address not found', 400, 'WALLET_MISSING');
+    }
+
+    // Query blockchain for recent transactions to this merchant
+    const pendingTransactions = await stellarService.getTransactionHistory(
+      merchantAddress,
+      50
+    );
+
+    res.json({
+      success: true,
+      data: {
+        transactions: pendingTransactions.filter(tx => tx.successful),
+        count: pendingTransactions.length,
+        totalAmount: pendingTransactions.reduce((sum, tx) => sum + parseFloat(tx.fee_charged || '0'), 0),
+      },
+    });
+  })
+);
+
+/**
+ * Query driver quota from fuel-lock contract
+ */
+router.get(
+  '/quota',
+  authenticate,
+  asyncHandler(async (req: Request, res: Response) => {
+    const driverAddress = req.user?.walletAddress;
+
+    if (!driverAddress) {
+      throw new AppError('Wallet address not found', 400, 'WALLET_MISSING');
+    }
+
+    // Query quota from contract
+    const quota = await stellarService.getDriverQuota(driverAddress);
+
+    res.json({
+      success: true,
+      data: quota,
+    });
+  })
+);
+
+/**
  * Stream real-time transactions (WebSocket endpoint info)
  */
 router.get(
@@ -82,6 +239,59 @@ router.get(
         message: 'Connect to WebSocket for real-time transaction updates',
         authentication: 'Pass JWT token in query parameter: ?token=YOUR_JWT',
       },
+    });
+  })
+);
+
+/**
+ * Process merchant settlement request
+ */
+router.post(
+  '/settle',
+  authenticate,
+  authorize('station_owner', 'merchant'),
+  [
+    body('date').isISO8601(),
+    body('totalAmount').isNumeric(),
+    body('transactionCount').isInt({ min: 0 }),
+  ],
+  asyncHandler(async (req: Request, res: Response) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      throw new AppError('Validation failed', 400, 'VALIDATION_ERROR');
+    }
+
+    const { date, totalAmount, transactionCount } = req.body;
+    const merchantId = req.user?.userId;
+    const merchantAddress = req.user?.walletAddress;
+
+    if (!merchantAddress) {
+      throw new AppError('Wallet address not found', 400, 'WALLET_MISSING');
+    }
+
+    // Create settlement record
+    const settlement = {
+      id: `settlement_${Date.now()}`,
+      merchantId,
+      merchantAddress,
+      date,
+      totalAmount: parseFloat(totalAmount),
+      transactionCount: parseInt(transactionCount),
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      estimatedCompletionDate: new Date(
+        Date.now() + 24 * 60 * 60 * 1000
+      ).toISOString(), // 24 hours from now
+    };
+
+    // TODO: Store in database (Supabase)
+    // TODO: Initiate actual settlement transaction
+    // TODO: Send notification to merchant
+
+    res.json({
+      success: true,
+      data: settlement,
+      message: 'Settlement request submitted. Funds will be transferred within 24 hours.',
     });
   })
 );
