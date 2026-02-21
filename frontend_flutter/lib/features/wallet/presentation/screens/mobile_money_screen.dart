@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fuelanchor/core/constants/app_colors.dart';
-import 'package:fuelanchor/features/wallet/presentation/screens/sep24_webview_screen.dart';
+import 'package:fuelanchor/core/config/api_config.dart';
+import 'package:fuelanchor/features/auth/data/services/supabase_service.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 /// Screen for initiating mobile money deposits and withdrawals via SEP-24
 class MobileMoneyScreen extends ConsumerStatefulWidget {

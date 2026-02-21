@@ -16,6 +16,12 @@ import '../../features/dashboard/presentation/screens/settlement_screen.dart';
 import '../../features/dashboard/presentation/screens/nearby_stations_screen.dart';
 import '../../features/dashboard/presentation/screens/edit_profile_screen.dart';
 import '../../features/dashboard/presentation/screens/change_password_screen.dart';
+// import '../../features/dashboard/presentation/screens/analytics_dashboard_screen.dart';
+import '../../features/dashboard/presentation/screens/fleet_manager_tower_screen.dart';
+import '../../features/voucher/presentation/screens/voucher_generator_screen.dart';
+import '../../features/voucher/presentation/screens/voucher_redemption_screen.dart';
+import '../../features/wallet/presentation/screens/mobile_money_screen.dart';
+// import '../../features/wallet/presentation/screens/mobile_money_deposit_screen.dart';
 
 part 'app_router.g.dart';
 
@@ -99,6 +105,38 @@ GoRouter appRouter(AppRouterRef ref) {
         name: 'changePassword',
         builder: (context, state) => const ChangePasswordScreen(),
       ),
+      // TODO: Add parameters for analytics dashboard
+      // GoRoute(
+      //   path: '/analytics-dashboard',
+      //   name: 'analyticsDashboard',
+      //   builder: (context, state) => const AnalyticsDashboardScreen(),
+      // ),
+      GoRoute(
+        path: '/fleet-tower',
+        name: 'fleetTower',
+        builder: (context, state) => const FleetManagerTowerScreen(),
+      ),
+      GoRoute(
+        path: '/voucher-generator',
+        name: 'voucherGenerator',
+        builder: (context, state) => const VoucherGeneratorScreen(),
+      ),
+      GoRoute(
+        path: '/voucher-redemption',
+        name: 'voucherRedemption',
+        builder: (context, state) => const VoucherRedemptionScreen(),
+      ),
+      GoRoute(
+        path: '/mobile-money',
+        name: 'mobileMoney',
+        builder: (context, state) => const MobileMoneyScreen(),
+      ),
+      // TODO: Add parameters for mobile money deposit
+      // GoRoute(
+      //   path: '/mobile-money-deposit',
+      //   name: 'mobileMoneyDeposit',
+      //   builder: (context, state) => const MobileMoneyDepositScreen(),
+      // ),
     ],
     errorBuilder: (context, state) => Scaffold(
       body: Center(

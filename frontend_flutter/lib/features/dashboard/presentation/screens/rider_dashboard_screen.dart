@@ -310,7 +310,9 @@ class _RiderDashboardScreenState extends ConsumerState<RiderDashboardScreen> {
                               children: [
                                 Expanded(
                                   child: ElevatedButton.icon(
-                                    onPressed: () {},
+                                    onPressed: () {
+                                      context.push('/mobile-money');
+                                    },
                                     icon: const Icon(Icons.add_circle, size: 20),
                                     label: const Text(
                                       'Top Up Balance',
@@ -470,7 +472,9 @@ class _RiderDashboardScreenState extends ConsumerState<RiderDashboardScreen> {
                             ),
                           ),
                           TextButton(
-                            onPressed: () {},
+                            onPressed: () {
+                              context.push('/history');
+                            },
                             child: const Text(
                               'VIEW HISTORY',
                               style: TextStyle(
