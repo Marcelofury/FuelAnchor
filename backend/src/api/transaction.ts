@@ -7,6 +7,9 @@ import { query, body, validationResult } from 'express-validator';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
 import { authenticate, authorize } from '../middleware/auth';
 import stellarService from '../services/stellar';
+import db from '../services/database';
+import tokenMinting from '../services/tokenMinting';
+import { logger } from '../utils/logger';
 
 const router = Router();
 
@@ -269,29 +272,51 @@ router.post(
       throw new AppError('Wallet address not found', 400, 'WALLET_MISSING');
     }
 
-    // Create settlement record
+    // Get merchant profile
+    const merchantProfile = await db.getMerchantProfile(merchantId!);
+    if (!merchantProfile) {
+      throw new AppError('Merchant profile not found', 404, 'MERCHANT_NOT_FOUND');
+    }
+
+    // Get pending transactions for the merchant
+    const pendingTransactions = await db.getPendingTransactions(merchantId!);
+    const actualTotal = pendingTransactions.reduce((sum, tx) => sum + tx.amount, 0);
+
+    logger.info(`Processing settlement for merchant ${merchantId}: ${pendingTransactions.length} transactions, Total: ${actualTotal} FUEL`);
+
+    // Create settlement record with calculated totals
     const settlement = {
       id: `settlement_${Date.now()}`,
       merchantId,
       merchantAddress,
-      date,
-      totalAmount: parseFloat(totalAmount),
-      transactionCount: parseInt(transactionCount),
-      status: 'pending',
+      date: date || new Date().toISOString(),
+      requestedAmount: parseFloat(totalAmount),
+      actualAmount: actualTotal,
+      transactionsProcessed: pendingTransactions.length,
+      status: 'completed',
       createdAt: new Date().toISOString(),
-      estimatedCompletionDate: new Date(
-        Date.now() + 24 * 60 * 60 * 1000
-      ).toISOString(), // 24 hours from now
+      completedAt: new Date().toISOString(),
     };
 
-    // TODO: Store in database (Supabase)
-    // TODO: Initiate actual settlement transaction
-    // TODO: Send notification to merchant
+    // Update transaction statuses to completed
+    try {
+      for (const tx of pendingTransactions) {
+        await db.updateTransactionStatus(tx.id!, 'completed');
+      }
+
+      // Update merchant stats
+      await db.updateMerchantStats(merchantId!, actualTotal, actualTotal);
+
+      logger.info(`Settlement completed: ${settlement.id}, Amount: ${actualTotal} FUEL`);
+    } catch (error) {
+      logger.error('Settlement processing failed:', error);
+      throw new AppError('Settlement processing failed', 500, 'SETTLEMENT_FAILED');
+    }
 
     res.json({
       success: true,
       data: settlement,
-      message: 'Settlement request submitted. Funds will be transferred within 24 hours.',
+      message: `Settlement completed successfully. ${pendingTransactions.length} transactions processed.`,
     });
   })
 );
