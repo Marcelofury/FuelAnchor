@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../core/config/supabase_config.dart';
+import '../../../../core/utils/logger.dart';
 
 class SettlementScreen extends ConsumerStatefulWidget {
   const SettlementScreen({super.key});
@@ -140,13 +143,66 @@ class _SettlementScreenState extends ConsumerState<SettlementScreen> {
     );
 
     if (confirmed == true) {
-      // TODO: Process settlement via backend
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Settlement request submitted successfully!'),
-          backgroundColor: AppColors.electricGreen,
-        ),
-      );
+      setState(() => _isLoading = true);
+      
+      try {
+        // Get current user's session
+        final supabase = SupabaseService.client;
+        final session = supabase.auth.currentSession;
+        
+        if (session == null) {
+          throw Exception('No authenticated session');
+        }
+
+        // Call backend settlement API
+        final response = await http.post(
+          Uri.parse('http://localhost:3000/api/transactions/settle'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ${session.accessToken}',
+          },
+          body: jsonEncode({
+            'date': _selectedDate.toIso8601String(),
+            'totalAmount': _totalRevenue,
+            'transactionCount': _transactionCount,
+          }),
+        );
+
+        setState(() => _isLoading = false);
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          AppLogger.info('Settlement processed: ${data['data']}');
+          
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Settlement request submitted successfully!'),
+                backgroundColor: AppColors.electricGreen,
+                duration: Duration(seconds: 3),
+              ),
+            );
+            
+            // Reload data to reflect settlement
+            await _loadSettlementData();
+          }
+        } else {
+          throw Exception('Settlement failed: ${response.statusCode}');
+        }
+      } catch (e) {
+        setState(() => _isLoading = false);
+        AppLogger.error('Settlement error', e);
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Settlement failed: ${e.toString()}'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
+      }
     }
   }
 
