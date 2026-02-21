@@ -123,6 +123,9 @@ CREATE POLICY "Users can view own merchant profile"
     ON public.merchant_profiles FOR SELECT
     USING (auth.uid() = id);
 
+-- Additional indexes for phone number lookup (used by webhook callbacks)
+CREATE UNIQUE INDEX idx_profiles_phone ON public.profiles(phone_number);
+
 -- Functions for automatic timestamp updates
 CREATE OR REPLACE FUNCTION public.handle_updated_at()
 RETURNS TRIGGER AS $$
@@ -137,3 +140,130 @@ CREATE TRIGGER set_updated_at
     BEFORE UPDATE ON public.profiles
     FOR EACH ROW
     EXECUTE FUNCTION public.handle_updated_at();
+
+-- RPC: Increment rider stats atomically (called after successful FUEL purchase)
+CREATE OR REPLACE FUNCTION public.increment_rider_stats(
+    p_rider_id UUID,
+    p_fuel_amount DECIMAL,
+    p_tx_count INTEGER DEFAULT 1
+)
+RETURNS VOID AS $$
+BEGIN
+    UPDATE public.rider_profiles
+    SET
+        total_fuel_purchased = total_fuel_purchased + p_fuel_amount,
+        total_transactions = total_transactions + p_tx_count
+    WHERE id = p_rider_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- RPC: Increment merchant stats atomically (called after merchant settlement)
+CREATE OR REPLACE FUNCTION public.increment_merchant_stats(
+    p_merchant_id UUID,
+    p_fuel_dispensed DECIMAL,
+    p_revenue DECIMAL
+)
+RETURNS VOID AS $$
+BEGIN
+    UPDATE public.merchant_profiles
+    SET
+        total_fuel_dispensed = total_fuel_dispensed + p_fuel_dispensed,
+        total_revenue = total_revenue + p_revenue
+    WHERE id = p_merchant_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- RPC: Rider dashboard stats aggregation
+CREATE OR REPLACE FUNCTION public.rider_dashboard_stats(p_rider_id UUID)
+RETURNS TABLE(
+    total_fuel_purchased DECIMAL,
+    total_transactions INTEGER,
+    credit_score INTEGER,
+    pending_transactions BIGINT,
+    recent_tx_count BIGINT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        rp.total_fuel_purchased,
+        rp.total_transactions,
+        rp.credit_score,
+        (SELECT COUNT(*) FROM public.transactions t
+         WHERE t.from_user_id = p_rider_id AND t.status = 'pending') AS pending_transactions,
+        (SELECT COUNT(*) FROM public.transactions t
+         WHERE t.from_user_id = p_rider_id
+           AND t.created_at >= NOW() - INTERVAL '30 days') AS recent_tx_count
+    FROM public.rider_profiles rp
+    WHERE rp.id = p_rider_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- RPC: Merchant dashboard stats aggregation
+CREATE OR REPLACE FUNCTION public.merchant_dashboard_stats(p_merchant_id UUID)
+RETURNS TABLE(
+    total_fuel_dispensed DECIMAL,
+    total_revenue DECIMAL,
+    pending_transactions BIGINT,
+    today_revenue DECIMAL,
+    today_transactions BIGINT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        mp.total_fuel_dispensed,
+        mp.total_revenue,
+        (SELECT COUNT(*) FROM public.transactions t
+         WHERE t.to_user_id = p_merchant_id AND t.status = 'pending') AS pending_transactions,
+        (SELECT COALESCE(SUM(t.amount), 0) FROM public.transactions t
+         WHERE t.to_user_id = p_merchant_id
+           AND t.created_at >= CURRENT_DATE
+           AND t.status = 'completed') AS today_revenue,
+        (SELECT COUNT(*) FROM public.transactions t
+         WHERE t.to_user_id = p_merchant_id
+           AND t.created_at >= CURRENT_DATE) AS today_transactions
+    FROM public.merchant_profiles mp
+    WHERE mp.id = p_merchant_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- RPC: Find nearby merchants using Haversine distance formula
+CREATE OR REPLACE FUNCTION public.nearby_merchants(
+    p_lat DECIMAL,
+    p_lng DECIMAL,
+    p_radius_km DECIMAL DEFAULT 10
+)
+RETURNS TABLE(
+    id UUID,
+    station_name TEXT,
+    station_id TEXT,
+    location_lat DECIMAL,
+    location_lng DECIMAL,
+    distance_km DECIMAL
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        mp.id,
+        mp.station_name,
+        mp.station_id,
+        mp.location_lat,
+        mp.location_lng,
+        ROUND(
+            (6371 * ACOS(
+                COS(RADIANS(p_lat)) * COS(RADIANS(mp.location_lat)) *
+                COS(RADIANS(mp.location_lng) - RADIANS(p_lng)) +
+                SIN(RADIANS(p_lat)) * SIN(RADIANS(mp.location_lat))
+            ))::DECIMAL, 2
+        ) AS distance_km
+    FROM public.merchant_profiles mp
+    WHERE mp.location_lat IS NOT NULL
+      AND mp.location_lng IS NOT NULL
+      AND (6371 * ACOS(
+            COS(RADIANS(p_lat)) * COS(RADIANS(mp.location_lat)) *
+            COS(RADIANS(mp.location_lng) - RADIANS(p_lng)) +
+            SIN(RADIANS(p_lat)) * SIN(RADIANS(mp.location_lat))
+          )) <= p_radius_km
+    ORDER BY distance_km ASC
+    LIMIT 50;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
