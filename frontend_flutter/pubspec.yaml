@@ -30,6 +30,9 @@ dependencies:
   mobile_scanner: ^4.0.1
   qr_flutter: ^4.1.0
   
+  # WebView for SEP-24
+  webview_flutter: ^4.5.0
+  
   # UI
   cupertino_icons: ^1.0.6
   google_fonts: ^6.1.0
