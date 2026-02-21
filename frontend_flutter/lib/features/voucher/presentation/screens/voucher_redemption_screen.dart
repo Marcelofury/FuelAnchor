@@ -168,7 +168,7 @@ class _VoucherRedemptionScreenState
     return Scaffold(
       appBar: AppBar(
         title: const Text('Redeem Voucher'),
-        backgroundColor: AppColors.primary,
+        backgroundColor: AppColors.navy,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -230,7 +230,7 @@ class _VoucherRedemptionScreenState
               height: 250,
               decoration: BoxDecoration(
                 border: Border.all(
-                  color: AppColors.accent,
+                  color: AppColors.electricGreen,
                   width: 3,
                 ),
                 borderRadius: BorderRadius.circular(12),
@@ -252,13 +252,13 @@ class _VoucherRedemptionScreenState
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.accent.withOpacity(0.1),
+              color: AppColors.electricGreen.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.accent.withOpacity(0.3)),
+              border: Border.all(color: AppColors.electricGreen.withOpacity(0.3)),
             ),
             child: Row(
               children: [
-                Icon(Icons.redeem, color: AppColors.accent, size: 32),
+                Icon(Icons.redeem, color: AppColors.electricGreen, size: 32),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -269,7 +269,7 @@ class _VoucherRedemptionScreenState
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.accent,
+                          color: AppColors.electricGreen,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -295,7 +295,7 @@ class _VoucherRedemptionScreenState
               labelText: 'Voucher Code',
               hintText: 'Enter or scan voucher code',
               prefixIcon: Icon(Icons.confirmation_number, 
-                color: AppColors.primary
+                color: AppColors.navy
               ),
               suffixIcon: _voucherCodeController.text.isNotEmpty
                   ? IconButton(
@@ -312,7 +312,7 @@ class _VoucherRedemptionScreenState
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: AppColors.primary, width: 2),
+                borderSide: BorderSide(color: AppColors.navy, width: 2),
               ),
             ),
             onChanged: (_) => setState(() {}),
@@ -327,7 +327,7 @@ class _VoucherRedemptionScreenState
                   ? null
                   : () => _verifyVoucher(_voucherCodeController.text),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: AppColors.navy,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -381,7 +381,7 @@ class _VoucherRedemptionScreenState
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.primary,
+                          color: AppColors.navy,
                         ),
                       ),
                       Container(
@@ -411,13 +411,13 @@ class _VoucherRedemptionScreenState
                     child: Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: AppColors.accent.withOpacity(0.1),
+                        color: AppColors.electricGreen.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Column(
                         children: [
                           Icon(Icons.account_balance_wallet, 
-                            color: AppColors.accent, 
+                            color: AppColors.electricGreen, 
                             size: 48
                           ),
                           const SizedBox(height: 8),
@@ -426,7 +426,7 @@ class _VoucherRedemptionScreenState
                             style: TextStyle(
                               fontSize: 32,
                               fontWeight: FontWeight.w800,
-                              color: AppColors.accent,
+                              color: AppColors.electricGreen,
                             ),
                           ),
                         ],
