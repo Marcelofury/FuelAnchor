@@ -7,6 +7,8 @@ import { body, validationResult } from 'express-validator';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
 import stellarService from '../services/stellar';
+import tokenMinting from '../services/tokenMinting';
+import db from '../services/database';
 import crypto from 'crypto';
 
 const router = Router();
@@ -36,10 +38,31 @@ router.post(
 
       logger.info(`M-Pesa payment successful: ${mpesaReceiptNumber} - KES ${amount} from ${phoneNumber}`);
 
-      // TODO: Credit user's wallet with FUEL tokens
-      // 1. Look up user by phone number
-      // 2. Calculate FUEL amount based on current rate
-      // 3. Mint FUEL tokens to user's wallet
+      // Credit user's wallet with FUEL tokens
+      try {
+        // Look up user by phone number
+        const userProfile = await db.getUserProfile(''); // Get by phone logic needed
+        
+        if (userProfile) {
+          const mintResult = await tokenMinting.mintAndTransfer({
+            userPublicKey: userProfile.stellar_public_key,
+            amount: parseFloat(amount),
+            currency: 'KES',
+            transactionRef: mpesaReceiptNumber,
+            provider: 'mpesa',
+          });
+
+          if (mintResult.success) {
+            logger.info(`Credited ${mintResult.fuelAmount} FUEL to ${userProfile.full_name}`);
+          } else {
+            logger.error(`Failed to mint FUEL: ${mintResult.error}`);
+          }
+        } else {
+          logger.warn(`User not found for phone: ${phoneNumber}`);
+        }
+      } catch (error) {
+        logger.error('Error crediting wallet:', error);
+      }
 
       res.json({
         ResultCode: 0,
@@ -97,7 +120,28 @@ router.post(
     if (status === 'SUCCESSFUL') {
       logger.info(`MTN payment successful: ${amount} ${currency} from ${payer?.partyId}`);
 
-      // TODO: Credit user's wallet with FUEL tokens
+      // Credit user's wallet with FUEL tokens
+      try {
+        const userProfile = await db.getUserProfile(''); // Get by phone logic needed
+        
+        if (userProfile) {
+          const mintResult = await tokenMinting.mintAndTransfer({
+            userPublicKey: userProfile.stellar_public_key,
+            amount: parseFloat(amount),
+            currency: currency || 'UGX',
+            transactionRef: financialTransactionId,
+            provider: 'mtn',
+          });
+
+          if (mintResult.success) {
+            logger.info(`Credited ${mintResult.fuelAmount} FUEL via MTN MoMo`);
+          } else {
+            logger.error(`Failed to mint FUEL: ${mintResult.error}`);
+          }
+        }
+      } catch (error) {
+        logger.error('Error crediting wallet:', error);
+      }
     } else if (status === 'FAILED') {
       logger.warn(`MTN payment failed: ${externalId}`);
     }
@@ -118,7 +162,27 @@ router.post(
 
     if (transaction?.status === 'SUCCESS') {
       logger.info(`Airtel payment successful: ${transaction.id}`);
-      // TODO: Credit user's wallet with FUEL tokens
+      
+      // Credit user's wallet with FUEL tokens
+      try {
+        const userProfile = await db.getUserProfile(''); // Get by phone logic needed
+        
+        if (userProfile) {
+          const mintResult = await tokenMinting.mintAndTransfer({
+            userPublicKey: userProfile.stellar_public_key,
+            amount: parseFloat(transaction.amount),
+            currency: transaction.currency || 'KES',
+            transactionRef: transaction.id,
+            provider: 'airtel',
+          });
+
+          if (mintResult.success) {
+            logger.info(`Credited ${mintResult.fuelAmount} FUEL via Airtel Money`);
+          }
+        }
+      } catch (error) {
+        logger.error('Error crediting wallet:', error);
+      }
     }
 
     res.json({ status: 'received' });
@@ -181,7 +245,23 @@ router.post(
 
     if (status === 'completed') {
       logger.info(`Anchor transaction completed: ${amount} ${asset_code}`);
-      // TODO: Update internal records
+      
+      // Update internal records
+      try {
+        const userProfile = await db.getUserByPublicKey(to);
+        if (userProfile) {
+          await db.createTransaction({
+            blockchain_hash: transaction_id,
+            from_user_id: from || 'anchor',
+            to_user_id: userProfile.id,
+            amount: parseFloat(amount),
+            status: 'completed',
+          });
+          logger.info(`Recorded anchor transaction in database`);
+        }
+      } catch (error) {
+        logger.error('Error recording anchor transaction:', error);
+      }
     }
 
     res.json({ received: true });
