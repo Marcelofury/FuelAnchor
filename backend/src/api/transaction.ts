@@ -147,14 +147,23 @@ router.post(
         throw new AppError('Transaction failed on blockchain', 400, 'TX_FAILED');
       }
 
-      // Record in database (Supabase) - TODO: Add database integration
+      // Record verified transaction in Supabase
+      const saved = await db.createTransaction({
+        blockchain_hash: transactionHash,
+        from_user_id: req.user?.userId,
+        amount: parseFloat(amount),
+        status: 'completed',
+        transaction_type: 'fuel_payment',
+      });
+
       const transactionRecord = {
+        id: saved?.id,
         hash: transactionHash,
         driverId: req.user?.userId,
         merchantAddress,
         amount: parseFloat(amount),
         status: 'confirmed',
-        timestamp: new Date().toISOString(),
+        timestamp: saved?.created_at || new Date().toISOString(),
       };
 
       res.json({
