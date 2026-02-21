@@ -72,31 +72,7 @@ router.get(
         });
       }
 
-      const analytics = {
-        merchantId,
-        summary: {
-          totalSales: 45230.75,
-          transactionCount: 523,
-          uniqueCustomers: 187,
-          averageTicket: 86.50,
-        },
-        topFuelTypes: [
-          { type: 'Petrol', percentage: 65, revenue: 29400.00 },
-          { type: 'Diesel', percentage: 30, revenue: 13569.23 },
-          { type: 'Electric', percentage: 5, revenue: 2261.52 },
-        ],
-        peakHours: [
-          { hour: 7, transactions: 45 },
-          { hour: 12, transactions: 38 },
-          { hour: 18, transactions: 52 },
-        ],
-        revenueByDay: generateMockTimeSeries(30),
-        paymentMethods: [
-          { method: 'FUEL Tokens', percentage: 70, count: 366 },
-          { method: 'M-Pesa', percentage: 20, count: 105 },
-          { method: 'MTN MoMo', percentage: 10, count: 52 },
-        ],
-      };
+      const analytics = await db.getMerchantAnalytics(merchantId);
 
       res.json({
         success: true,
@@ -129,44 +105,7 @@ router.get(
         });
       }
 
-      const analytics = {
-        fleetId,
-        summary: {
-          totalDrivers: 25,
-          activeDrivers: 22,
-          totalFuelSpend: 78450.25,
-          averageFuelPerDriver: 3138.01,
-        },
-        driverPerformance: [
-          {
-            driverId: 'd1',
-            name: 'John Kamau',
-            fuelUsed: 4250.00,
-            trips: 145,
-            efficiency: 92,
-          },
-          {
-            driverId: 'd2',
-            name: 'Mary Wanjiku',
-            fuelUsed: 3890.00,
-            trips: 132,
-            efficiency: 89,
-          },
-          // ... more drivers
-        ],
-        fuelConsumption: generateMockTimeSeries(30),
-        topRoutes: [
-          { route: 'Nairobi - Mombasa', trips: 45, fuelUsed: 8900.00 },
-          { route: 'Nairobi - Kisumu', trips: 38, fuelUsed: 7200.00 },
-          { route: 'Nairobi - Nakuru', trips: 52, fuelUsed: 6500.00 },
-        ],
-        costSavings: {
-          blockchain: 1250.00,
-          bulkPurchase: 3400.00,
-          routeOptimization: 890.00,
-          total: 5540.00,
-        },
-      };
+      const analytics = await db.getFleetDetailedAnalytics(fleetId);
 
       res.json({
         success: true,
@@ -198,31 +137,7 @@ router.get(
         });
       }
 
-      const analytics = {
-        riderId,
-        summary: {
-          totalFuelPurchases: 156.50,
-          transactionCount: 45,
-          creditScore: 725,
-          creditTier: 'Gold',
-        },
-        spendingTrend: generateMockTimeSeries(90),
-        topStations: [
-          { name: 'Shell Westlands', visits: 12, amount: 45.00 },
-          { name: 'Total Kilimani', visits: 10, amount: 38.50 },
-          { name: 'Galana Oil CBD', visits: 8, amount: 32.00 },
-        ],
-        creditHistory: [
-          { date: '2024-01', score: 650 },
-          { date: '2024-02', score: 680 },
-          { date: '2024-03', score: 725 },
-        ],
-        achievements: [
-          { title: 'Early Adopter', description: 'One of the first 100 users', earned: true },
-          { title: 'Consistent User', description: '30 consecutive days', earned: true },
-          { title: 'Gold Status', description: 'Reached Gold credit tier', earned: true },
-        ],
-      };
+      const analytics = await db.getRiderAnalytics(riderId);
 
       res.json({
         success: true,
@@ -245,15 +160,7 @@ router.get(
   authorize('admin'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const distribution = {
-        unscored: 145,
-        bronze: 234,
-        silver: 189,
-        gold: 98,
-        platinum: 34,
-        total: 700,
-        averageScore: 567,
-      };
+      const distribution = await db.getCreditScoreDistribution();
 
       res.json({
         success: true,
@@ -276,26 +183,26 @@ router.get(
   authorize('admin'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      const dbHealthy = await db.healthCheck();
+
       const health = {
         api: {
           status: 'operational',
-          uptime: 99.98,
-          responseTime: 45,
+          uptime: process.uptime(),
+          nodeVersion: process.version,
+        },
+        database: {
+          status: dbHealthy ? 'operational' : 'degraded',
         },
         blockchain: {
           status: 'operational',
-          lastBlock: 12345678,
-          transactionsPending: 3,
-        },
-        database: {
-          status: 'operational',
-          connections: 12,
-          queryTime: 8,
+          network: process.env.STELLAR_NETWORK || 'testnet',
+          rpcUrl: process.env.STELLAR_SOROBAN_RPC_URL,
         },
         mobileMoney: {
-          mpesa: 'operational',
-          mtn: 'operational',
-          airtel: 'degraded',
+          mpesa: process.env.MPESA_CONSUMER_KEY ? 'configured' : 'not_configured',
+          mtn: process.env.MTN_API_KEY ? 'configured' : 'not_configured',
+          airtel: process.env.AIRTEL_CLIENT_ID ? 'configured' : 'not_configured',
         },
       };
 
