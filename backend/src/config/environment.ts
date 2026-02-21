@@ -42,11 +42,14 @@ export const config = {
   mpesaShortcode: process.env.MPESA_SHORTCODE || '',
   mpesaPasskey: process.env.MPESA_PASSKEY || '',
   mpesaCallbackUrl: process.env.MPESA_CALLBACK_URL || '',
+  mpesaSecurityCredential: process.env.MPESA_SECURITY_CREDENTIAL || '',
 
   // MTN Mobile Money
   mtnApiKey: process.env.MTN_API_KEY || '',
   mtnApiSecret: process.env.MTN_API_SECRET || '',
   mtnSubscriptionKey: process.env.MTN_SUBSCRIPTION_KEY || '',
+  mtnCollectionsUserId: process.env.MTN_COLLECTIONS_USER_ID || '',
+  mtnDisbursementsUserId: process.env.MTN_DISBURSEMENTS_USER_ID || '',
 
   // SMS Gateway (Africa's Talking)
   atApiKey: process.env.AT_API_KEY || '',
@@ -62,6 +65,16 @@ export const config = {
   // Rate Limits
   apiRateLimit: parseInt(process.env.API_RATE_LIMIT || '100', 10),
   apiRateWindow: parseInt(process.env.API_RATE_WINDOW || '900000', 10), // 15 minutes
+
+  // Security
+  webhookSecret: process.env.WEBHOOK_SECRET || 'change-this-webhook-secret-in-production',
+  encryptionKey: process.env.ENCRYPTION_KEY || 'change-this-encryption-key-in-production',
+  allowedApiKeys: process.env.ALLOWED_API_KEYS?.split(',') || [],
+  maxRequestBodySize: process.env.MAX_REQUEST_BODY_SIZE || '10mb',
+
+  // Session
+  sessionSecret: process.env.SESSION_SECRET || 'change-this-session-secret-in-production',
+  sessionMaxAge: parseInt(process.env.SESSION_MAX_AGE || '86400000', 10), // 24 hours
 
   // Logging
   logLevel: process.env.LOG_LEVEL || 'info',
