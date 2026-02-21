@@ -58,6 +58,12 @@ export const config = {
   mtnCollectionsUserId: process.env.MTN_COLLECTIONS_USER_ID || '',
   mtnDisbursementsUserId: process.env.MTN_DISBURSEMENTS_USER_ID || '',
 
+  // Airtel Money
+  airtelClientId: process.env.AIRTEL_CLIENT_ID || '',
+  airtelClientSecret: process.env.AIRTEL_CLIENT_SECRET || '',
+  airtelEncryptedPin: process.env.AIRTEL_ENCRYPTED_PIN || '',
+  airtelCallbackUrl: process.env.AIRTEL_CALLBACK_URL || '',
+
   // SMS Gateway (Africa's Talking)
   atApiKey: process.env.AT_API_KEY || '',
   atUsername: process.env.AT_USERNAME || '',
