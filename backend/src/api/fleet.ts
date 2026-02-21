@@ -64,7 +64,7 @@ router.get(
   authorize('fleet_operator', 'admin'),
   asyncHandler(async (req: Request, res: Response) => {
     const fleets = req.user!.role === 'admin'
-      ? await db.getFleetsByOperator('')   // TODO: add admin getAll method
+      ? await db.getAllFleets()
       : await db.getFleetsByOperator(req.user!.userId);
 
     res.json({ success: true, data: fleets });
