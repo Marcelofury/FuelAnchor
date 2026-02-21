@@ -123,7 +123,8 @@ router.post(
 
       // Credit user's wallet with FUEL tokens
       try {
-        const userProfile = await db.getUserProfile(''); // Get by phone logic needed
+        const payerPhone = payer?.partyId;
+        const userProfile = payerPhone ? await db.getUserByPhone(payerPhone) : null;
         
         if (userProfile) {
           const mintResult = await tokenMinting.mintAndTransfer({
@@ -166,7 +167,7 @@ router.post(
 
       // Credit user's wallet with FUEL tokens
       try {
-        const userProfile = await db.getUserProfile(''); // TODO: phone → userId lookup
+        const userProfile = result.msisdn ? await db.getUserByPhone(result.msisdn) : null;
         if (userProfile) {
           const mintResult = await tokenMinting.mintAndTransfer({
             userPublicKey: userProfile.stellar_public_key,
