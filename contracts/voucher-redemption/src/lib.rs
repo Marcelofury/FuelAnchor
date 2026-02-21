@@ -9,11 +9,11 @@
 #![no_std]
 
 use soroban_sdk::{
-    contract, contractimpl, contracttype, Address, BytesN, Env, Map, String, Symbol, Vec,
+    contract, contractimpl, contracttype, Address, BytesN, Env, String, Symbol, Vec,
 };
 
 /// Error codes for the redemption contract
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 #[contracttype]
 pub enum RedemptionError {
     NotInitialized = 1,
@@ -353,9 +353,10 @@ impl VoucherRedemption {
         let new_count = redemption_count + 1;
         
         // Create redemption ID from hash of relevant data
-        let redemption_id = env.crypto().sha256(
+        let redemption_hash = env.crypto().sha256(
             &soroban_sdk::Bytes::from_slice(&env, &new_count.to_be_bytes())
         );
+        let redemption_id = BytesN::from_array(&env, &redemption_hash.to_array());
 
         // Create redemption record
         let record = RedemptionRecord {
