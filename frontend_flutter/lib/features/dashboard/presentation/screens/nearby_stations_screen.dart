@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/utils/logger.dart';
+import '../../../../core/services/supabase_service.dart';
 
 class NearbyStationsScreen extends ConsumerStatefulWidget {
   const NearbyStationsScreen({super.key});
@@ -10,49 +15,147 @@ class NearbyStationsScreen extends ConsumerStatefulWidget {
 }
 
 class _NearbyStationsScreenState extends ConsumerState<NearbyStationsScreen> {
-  final List<Map<String, dynamic>> _stations = [
-    {
-      'name': 'Shell Kampala Central',
-      'distance': 1.2,
-      'dieselPrice': 4850,
-      'petrolPrice': 5200,
-      'rating': 4.5,
-      'open': true,
-      'verified': true,
-    },
-    {
-      'name': 'Total Nakasero',
-      'distance': 2.3,
-      'dieselPrice': 4800,
-      'petrolPrice': 5150,
-      'rating': 4.3,
-      'open': true,
-      'verified': true,
-    },
-    {
-      'name': 'Engen Kololo',
-      'distance': 3.1,
-      'dieselPrice': 4900,
-      'petrolPrice': 5250,
-      'rating': 4.7,
-      'open': true,
-      'verified': true,
-    },
-    {
-      'name': 'Petro Energy Ntinda',
-      'distance': 4.5,
-      'dieselPrice': 4750,
-      'petrolPrice': 5100,
-      'rating': 4.2,
-      'open': false,
-      'verified': false,
-    },
-  ];
+  List<Map<String, dynamic>> _stations = [];
+  bool _isLoading = true;
+  String? _error;
+  Position? _currentPosition;
 
   String _sortBy = 'distance'; // distance, price
 
   @override
+  void initState() {
+    super.initState();
+    _loadNearbyStations();
+  }
+
+  Future<void> _loadNearbyStations() async {
+    setState(() => _isLoading = true);
+
+    try {
+      // Get current location
+      Position position;
+      try {
+        position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+        );
+      } catch (e) {
+        AppLogger.warning('Failed to get location, using default', e);
+        // Default to Kampala coordinates
+        position = Position(
+          latitude: 0.3476,
+          longitude: 32.5825,
+          timestamp: DateTime.now(),
+          accuracy: 0,
+          altitude: 0,
+          heading: 0,
+          speed: 0,
+          speedAccuracy: 0,
+          altitudeAccuracy: 0,
+          headingAccuracy: 0,
+        );
+      }
+
+      setState(() => _currentPosition = position);
+
+      // Fetch stations from backend
+      final supabase = SupabaseService.client;
+      final session = supabase.auth.currentSession;
+      
+      if (session == null) {
+        throw Exception('No authenticated session');
+      }
+
+      final response = await http.get(
+        Uri.parse(
+          'http://localhost:3000/api/stations/nearby'
+          '?lat=${position.latitude}'
+          '&lng=${position.longitude}'
+          '&radius=10',
+        ),
+        headers: {
+          'Authorization': 'Bearer ${session.accessToken}',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final stationsData = data['data']['stations'] as List;
+        
+        setState(() {
+          _stations = stationsData.map((station) => {
+            'name': station['name'] as String,
+            'distance': station['distance'] as double,
+            'dieselPrice': (station['fuelTypes'] as List)
+                .firstWhere((ft) => ft['type'] == 'diesel',
+                    orElse: () => {'pricePerLiter': 4850})['pricePerLiter'] as int,
+            'petrolPrice': (station['fuelTypes'] as List)
+                .firstWhere((ft) => ft['type'] == 'petrol',
+                    orElse: () => {'pricePerLiter': 5200})['pricePerLiter'] as int,
+            'rating': station['rating'] ?? 0.0,
+            'open': true, // TODO: Add opening hours logic
+            'verified': station['isVerified'] as bool,
+            'address': station['address'] as String,
+            'location': station['location'],
+          }).toList();
+          _isLoading = false;
+        });
+      } else {
+        throw Exception('Failed to load stations: ${response.statusCode}');
+      }
+    } catch (e) {
+      AppLogger.error('Error loading stations', e);
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+        // Fallback to mock data
+        _stations = [
+          {
+            'name': 'Shell Kampala Central',
+            'distance': 1.2,
+            'dieselPrice': 4850,
+            'petrolPrice': 5200,
+            'rating': 4.5,
+            'open': true,
+            'verified': true,
+          },
+          {
+            'name': 'Total Nakasero',
+            'distance': 2.3,
+            'dieselPrice': 4800,
+            'petrolPrice': 5150,
+            'rating': 4.3,
+            'open': true,
+            'verified': true,
+          },
+        ];
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF5F5F5),
+        appBar: AppBar(
+          backgroundColor: AppColors.navy,
+          title: const Text('Nearby Stations'),
+        ),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.electricGreen),
+              ),
+              SizedBox(height: 16),
+              Text('Finding nearby fuel stations...'),
+            ],
+          ),
+        ),
+      );
+    }
+
     // Sort stations
     final sortedStations = List<Map<String, dynamic>>.from(_stations);
     if (_sortBy == 'distance') {
@@ -67,6 +170,10 @@ class _NearbyStationsScreenState extends ConsumerState<NearbyStationsScreen> {
         backgroundColor: AppColors.navy,
         title: const Text('Nearby Stations'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadNearbyStations,
+          ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.sort),
             onSelected: (value) {
