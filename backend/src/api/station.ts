@@ -1,21 +1,19 @@
 /**
- * Station Management Routes
+ * Station Management Routes – backed by Supabase merchant_profiles
  */
 
 import { Router, Request, Response } from 'express';
 import { body, param, query, validationResult } from 'express-validator';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
 import { authenticate, authorize } from '../middleware/auth';
+import db from '../services/database';
 import stellarService from '../services/stellar';
 import { logger } from '../utils/logger';
 
 const router = Router();
 
-// In-memory storage for stations
-const stations: Map<string, any> = new Map();
-
 /**
- * Register a new fuel station
+ * Register/update the authenticated merchant as a fuel station
  */
 router.post(
   '/',
@@ -39,46 +37,48 @@ router.post(
 
     const { name, address, country, latitude, longitude, fuelTypes } = req.body;
 
-    // Create wallet for station (anchor account)
-    const wallet = stellarService.createWallet();
+    // Get or create merchant profile for this user
+    let merchantProfile = await db.getMerchantProfile(req.user!.userId);
 
-    const stationId = `station_${Date.now()}`;
-    const station = {
-      id: stationId,
-      name,
+    if (!merchantProfile) {
+      throw new AppError('Merchant profile not found. Please complete registration first.', 404, 'PROFILE_NOT_FOUND');
+    }
+
+    // Create stellar wallet for station if not yet created
+    const wallet = merchantProfile.stellar_public_key
+      ? { publicKey: merchantProfile.stellar_public_key }
+      : stellarService.createWallet();
+
+    const updated = await db.updateMerchantProfile(merchantProfile.id!, {
+      station_name: name,
       address,
       country,
-      location: {
-        latitude,
-        longitude,
-        geofenceRadius: 100, // 100 meters default
-      },
-      fuelTypes,
-      ownerId: req.user?.userId,
-      walletAddress: wallet.publicKey,
-      walletSecret: wallet.secretKey,
-      isActive: true,
-      isVerified: false, // Pending verification
-      totalRedemptions: 0,
-      totalVolume: 0,
-      rating: 0,
-      createdAt: new Date().toISOString(),
-    };
+      latitude,
+      longitude,
+      fuel_types: fuelTypes,
+      stellar_public_key: wallet.publicKey,
+      geofence_radius_meters: 100,
+      is_active: true,
+      is_verified: false,
+    });
 
-    stations.set(stationId, station);
-
-    logger.info(`Station registered: ${stationId} by ${req.user?.userId}`);
+    logger.info(`Station registered/updated: ${merchantProfile.id} by ${req.user!.userId}`);
 
     res.status(201).json({
       success: true,
       data: {
-        id: station.id,
-        name: station.name,
-        address: station.address,
-        location: station.location,
-        fuelTypes: station.fuelTypes,
-        walletAddress: station.walletAddress,
-        isVerified: station.isVerified,
+        id: updated.id,
+        name: updated.station_name,
+        address: (updated as any).address,
+        country: (updated as any).country,
+        location: {
+          latitude: (updated as any).latitude,
+          longitude: (updated as any).longitude,
+          geofenceRadius: (updated as any).geofence_radius_meters || 100,
+        },
+        fuelTypes: (updated as any).fuel_types,
+        walletAddress: updated.stellar_public_key,
+        isVerified: (updated as any).is_verified,
       },
     });
   })
@@ -93,43 +93,29 @@ router.get(
   [
     query('country').optional().isIn(['KE', 'UG', 'TZ', 'RW', 'BI', 'SS']),
     query('verified').optional().isBoolean(),
-    query('lat').optional().isFloat(),
-    query('lng').optional().isFloat(),
-    query('radius').optional().isInt({ min: 1, max: 100 }),
   ],
   asyncHandler(async (req: Request, res: Response) => {
-    const { country, verified, lat, lng, radius } = req.query;
+    const country = req.query.country as string | undefined;
+    const verified = req.query.verified !== undefined ? req.query.verified === 'true' : undefined;
 
-    let result: any[] = [];
-
-    for (const [, station] of stations) {
-      let include = true;
-
-      if (country && station.country !== country) {
-        include = false;
-      }
-
-      if (verified !== undefined && station.isVerified !== (verified === 'true')) {
-        include = false;
-      }
-
-      if (include) {
-        result.push({
-          id: station.id,
-          name: station.name,
-          address: station.address,
-          country: station.country,
-          location: station.location,
-          fuelTypes: station.fuelTypes,
-          isVerified: station.isVerified,
-          rating: station.rating,
-        });
-      }
-    }
+    const merchants = await db.getAllMerchants(country, verified);
 
     res.json({
       success: true,
-      data: result,
+      data: merchants.map(m => ({
+        id: m.id,
+        name: m.station_name,
+        address: (m as any).address,
+        country: (m as any).country,
+        location: {
+          latitude: (m as any).latitude,
+          longitude: (m as any).longitude,
+          geofenceRadius: (m as any).geofence_radius_meters || 100,
+        },
+        fuelTypes: (m as any).fuel_types,
+        isVerified: (m as any).is_verified,
+        rating: (m as any).rating,
+      })),
     });
   })
 );
@@ -155,53 +141,13 @@ router.get(
     const userLng = parseFloat(req.query.lng as string);
     const radiusKm = parseInt(req.query.radius as string) || 10;
 
-    // Haversine distance calculation
-    const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-      const R = 6371; // Earth's radius in km
-      const dLat = (lat2 - lat1) * Math.PI / 180;
-      const dLon = (lon2 - lon1) * Math.PI / 180;
-      const a = 
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-        Math.sin(dLon / 2) * Math.sin(dLon / 2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return R * c;
-    };
-
-    const nearbyStations = [];
-
-    for (const [, station] of stations) {
-      if (!station.isActive) continue;
-
-      const distance = calculateDistance(
-        userLat,
-        userLng,
-        station.location.latitude,
-        station.location.longitude
-      );
-
-      if (distance <= radiusKm) {
-        nearbyStations.push({
-          id: station.id,
-          name: station.name,
-          address: station.address,
-          location: station.location,
-          fuelTypes: station.fuelTypes,
-          rating: station.rating,
-          distance: Math.round(distance * 100) / 100, // Round to 2 decimal places
-          isVerified: station.isVerified,
-        });
-      }
-    }
-
-    // Sort by distance
-    nearbyStations.sort((a, b) => a.distance - b.distance);
+    const nearbyMerchants = await db.getNearbyMerchants(userLat, userLng, radiusKm);
 
     res.json({
       success: true,
       data: {
-        stations: nearbyStations,
-        count: nearbyStations.length,
+        stations: nearbyMerchants,
+        count: nearbyMerchants.length,
         searchRadius: radiusKm,
         userLocation: { latitude: userLat, longitude: userLng },
       },
@@ -217,20 +163,39 @@ router.get(
   authenticate,
   [param('stationId').notEmpty()],
   asyncHandler(async (req: Request, res: Response) => {
-    const station = stations.get(req.params.stationId);
+    const merchant = await db.getMerchantProfile(req.params.stationId);
 
-    if (!station) {
+    if (!merchant) {
       throw new AppError('Station not found', 404, 'STATION_NOT_FOUND');
     }
 
-    // Get FUEL/USDC balance
-    const balance = await stellarService.getFuelBalance(station.walletAddress);
+    let balance = '0';
+    if (merchant.stellar_public_key) {
+      try {
+        balance = await stellarService.getFuelBalance(merchant.stellar_public_key);
+      } catch {
+        // ignore
+      }
+    }
 
     res.json({
       success: true,
       data: {
-        ...station,
-        walletSecret: undefined, // Never expose secret
+        id: merchant.id,
+        name: merchant.station_name,
+        address: (merchant as any).address,
+        country: (merchant as any).country,
+        location: {
+          latitude: (merchant as any).latitude,
+          longitude: (merchant as any).longitude,
+          geofenceRadius: (merchant as any).geofence_radius_meters || 100,
+        },
+        fuelTypes: (merchant as any).fuel_types,
+        walletAddress: merchant.stellar_public_key,
+        isVerified: (merchant as any).is_verified,
+        totalRedemptions: merchant.total_redemptions,
+        totalVolume: merchant.total_volume,
+        rating: (merchant as any).rating,
         balance,
       },
     });
@@ -251,30 +216,21 @@ router.patch(
     body('fuelTypes.*.pricePerLiter').isFloat({ min: 0 }),
   ],
   asyncHandler(async (req: Request, res: Response) => {
-    const station = stations.get(req.params.stationId);
+    const merchant = await db.getMerchantProfile(req.params.stationId);
 
-    if (!station) {
-      throw new AppError('Station not found', 404, 'STATION_NOT_FOUND');
-    }
+    if (!merchant) throw new AppError('Station not found', 404, 'STATION_NOT_FOUND');
 
-    if (station.ownerId !== req.user?.userId && req.user?.role !== 'admin') {
+    if (merchant.id !== req.user!.userId && req.user!.role !== 'admin') {
       throw new AppError('Unauthorized', 403, 'FORBIDDEN');
     }
 
-    station.fuelTypes = req.body.fuelTypes;
-    station.updatedAt = new Date().toISOString();
-    stations.set(req.params.stationId, station);
-
-    logger.info(`Prices updated for station ${req.params.stationId}`);
-
-    res.json({
-      success: true,
-      data: {
-        id: station.id,
-        fuelTypes: station.fuelTypes,
-        updatedAt: station.updatedAt,
-      },
+    const updated = await db.updateMerchantProfile(merchant.id!, {
+      fuel_types: req.body.fuelTypes,
     });
+
+    logger.info(`Prices updated for station ${merchant.id}`);
+
+    res.json({ success: true, data: { id: updated.id, fuelTypes: (updated as any).fuel_types } });
   })
 );
 
@@ -299,61 +255,72 @@ router.post(
       throw new AppError('Validation failed', 400, 'VALIDATION_ERROR');
     }
 
-    const station = stations.get(req.params.stationId);
-
-    if (!station) {
-      throw new AppError('Station not found', 404, 'STATION_NOT_FOUND');
-    }
-
-    if (!station.isActive) {
-      throw new AppError('Station is not active', 400, 'STATION_INACTIVE');
-    }
+    const merchant = await db.getMerchantProfile(req.params.stationId);
+    if (!merchant) throw new AppError('Station not found', 404, 'STATION_NOT_FOUND');
+    if (!(merchant as any).is_active) throw new AppError('Station is not active', 400, 'STATION_INACTIVE');
 
     const { driverWallet, fuelType, amount, liters, latitude, longitude, vehicleId } = req.body;
 
     // Verify geofence
+    const geofenceRadius = (merchant as any).geofence_radius_meters || 100;
     const distance = calculateDistance(
       latitude,
       longitude,
-      station.location.latitude,
-      station.location.longitude
+      (merchant as any).latitude,
+      (merchant as any).longitude
     );
 
-    if (distance > station.location.geofenceRadius) {
+    if (distance > geofenceRadius) {
       throw new AppError('Location outside station geofence', 400, 'OUT_OF_GEOFENCE');
     }
 
     // Verify driver has sufficient balance
-    const driverBalance = await stellarService.getFuelBalance(driverWallet);
+    let driverBalance = '0';
+    try {
+      driverBalance = await stellarService.getFuelBalance(driverWallet);
+    } catch {
+      throw new AppError('Could not verify driver balance', 500, 'BALANCE_CHECK_FAILED');
+    }
+
     if (parseFloat(driverBalance) < amount) {
       throw new AppError('Insufficient FUEL balance', 400, 'INSUFFICIENT_BALANCE');
     }
 
-    // Create redemption record
-    const redemption = {
-      id: `redemption_${Date.now()}`,
-      stationId: station.id,
-      driverWallet,
-      fuelType,
+    // Record transaction in DB
+    const txRecord = await db.createTransaction({
+      rider_id: req.user!.userId,
+      merchant_id: merchant.id!,
       amount,
-      liters,
-      pricePerLiter: station.fuelTypes.find((f: any) => f.type === fuelType)?.pricePerLiter,
-      location: { latitude, longitude },
-      vehicleId,
-      timestamp: new Date().toISOString(),
+      fuel_liters: liters,
+      fuel_type: fuelType,
+      latitude,
+      longitude,
+      vehicle_id: vehicleId,
       status: 'completed',
-    };
+      transaction_type: 'fuel_purchase',
+    });
 
-    // Update station stats
-    station.totalRedemptions += 1;
-    station.totalVolume += liters;
-    stations.set(req.params.stationId, station);
+    // Update merchant stats
+    try {
+      await db.updateMerchantStats(merchant.id!, liters, amount);
+    } catch {
+      // non-fatal
+    }
 
-    logger.info(`Fuel redeemed at ${station.name}: ${liters}L for ${amount} FUEL`);
+    logger.info(`Fuel redeemed at ${merchant.station_name}: ${liters}L for ${amount} FUEL`);
 
     res.json({
       success: true,
-      data: redemption,
+      data: {
+        id: txRecord.id,
+        stationId: merchant.id,
+        driverWallet,
+        fuelType,
+        amount,
+        liters,
+        timestamp: txRecord.created_at,
+        status: 'completed',
+      },
     });
   })
 );
@@ -367,52 +334,43 @@ router.get(
   authorize('station_owner', 'admin'),
   [param('stationId').notEmpty()],
   asyncHandler(async (req: Request, res: Response) => {
-    const station = stations.get(req.params.stationId);
+    const merchant = await db.getMerchantProfile(req.params.stationId);
 
-    if (!station) {
-      throw new AppError('Station not found', 404, 'STATION_NOT_FOUND');
-    }
+    if (!merchant) throw new AppError('Station not found', 404, 'STATION_NOT_FOUND');
 
-    if (station.ownerId !== req.user?.userId && req.user?.role !== 'admin') {
+    if (merchant.id !== req.user!.userId && req.user!.role !== 'admin') {
       throw new AppError('Unauthorized', 403, 'FORBIDDEN');
     }
 
-    const analytics = {
-      stationId: station.id,
-      totalRedemptions: station.totalRedemptions,
-      totalVolume: station.totalVolume,
-      averageTransactionValue: station.totalRedemptions > 0
-        ? (station.totalVolume / station.totalRedemptions).toFixed(2)
-        : 0,
-      rating: station.rating,
-      redemptionsByFuelType: {},
-      peakHours: [],
-      topFleets: [],
-    };
-
     res.json({
       success: true,
-      data: analytics,
+      data: {
+        stationId: merchant.id,
+        totalRedemptions: merchant.total_redemptions ?? 0,
+        totalVolume: merchant.total_volume ?? 0,
+        averageTransactionValue:
+          (merchant.total_redemptions ?? 0) > 0
+            ? ((merchant.total_volume ?? 0) / merchant.total_redemptions!).toFixed(2)
+            : '0.00',
+        rating: (merchant as any).rating || 0,
+      },
     });
   })
 );
 
 /**
- * Calculate distance between two coordinates (Haversine formula)
+ * Haversine distance in meters
  */
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371e3; // Earth radius in meters
-  const φ1 = (lat1 * Math.PI) / 180;
-  const φ2 = (lat2 * Math.PI) / 180;
-  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
-  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
-
+  const R = 6371e3;
+  const phi1 = (lat1 * Math.PI) / 180;
+  const phi2 = (lat2 * Math.PI) / 180;
+  const dPhi = ((lat2 - lat1) * Math.PI) / 180;
+  const dLambda = ((lon2 - lon1) * Math.PI) / 180;
   const a =
-    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return R * c; // Distance in meters
+    Math.sin(dPhi / 2) ** 2 +
+    Math.cos(phi1) * Math.cos(phi2) * Math.sin(dLambda / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 export default router;
