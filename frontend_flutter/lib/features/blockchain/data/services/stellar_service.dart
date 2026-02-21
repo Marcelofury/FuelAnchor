@@ -13,9 +13,9 @@ class StellarService {
   static const String _keyPairPublicKey = 'stellar_public_key';
   static const String _fuelAssetCode = 'FUEL';
   
-  // TODO: Replace with your actual asset issuer and contract ID
-  static const String _fuelAssetIssuer = 'GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
-  static const String _sorobanContractId = 'CXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
+  // Deployed contract IDs from Phase 1 (Feb 21, 2026)
+  static const String _fuelAssetIssuer = 'GCHWQJ4OVQBBOSWEQUXYXFMWVIINIMN2AXWU6FRKCB7YA6NPFFJOJXKX';
+  static const String _sorobanContractId = 'CDRQE4CCMQP5AFZZQ6MFADSAAGXFQZQVUKX6H66AQW5BUDPDSB32ITNB';
 
   StellarService({
     required FlutterSecureStorage secureStorage,
@@ -131,25 +131,83 @@ class StellarService {
         (keyPair) async {
           try {
             AppLogger.info('Initiating payment to merchant: $merchantId');
+            AppLogger.info('Amount: $amount, GPS: $driverGps');
             
-            // TODO: Implement Soroban smart contract invocation for pay_merchant
-            // The Stellar SDK API has changed significantly in v1.9.4
-            // This needs to be updated to use the new Soroban APIs:
-            // - Use proper contract invocation builders
-            // - Update XDR value constructors
-            // - Handle contract deployment and initialization
+            // Get driver's public key
+            final driverAddress = keyPair.accountId;
             
-            // For now, returning a mock transaction hash to allow app to compile and run
-            // This should be replaced with actual contract invocation once the 
-            // smart contracts are deployed and the SDK API is properly configured
+            // Load driver's account to get sequence number
+            final account = await _sdk.accounts.account(driverAddress);
             
-            await Future.delayed(const Duration(milliseconds: 500)); // Simulate network delay
+            // Convert GPS coordinates to micro-degrees (multiply by 1,000,000)
+            final latMicroDegrees = (driverGps['latitude']! * 1000000).round();
+            final lngMicroDegrees = (driverGps['longitude']! * 1000000).round();
             
-            final mockHash = 'mock_tx_${DateTime.now().millisecondsSinceEpoch}';
-            AppLogger.info('Mock payment transaction: $mockHash');
-            AppLogger.info('Amount: $amount, Merchant: $merchantId, GPS: $driverGps');
+            // Build contract invocation for pay_merchant function
+            // Parameters: driver (Address), merchant (Address), amount (i128), driver_gps ((i128, i128))
+            final contractAddress = Address.forContractId(_sorobanContractId);
             
-            return Right(mockHash);
+            // Create XDR values for function arguments
+            final driverAddressValue = Address.forAccountId(driverAddress);
+            final merchantAddressValue = Address.forAccountId(merchantId);
+            final amountValue = XdrSCVal.forI128(
+              XdrInt128Parts(
+                XdrUint64(BigInt.from((int.parse(amount) >> 64) & 0xFFFFFFFFFFFFFFFF).toInt()),
+                XdrUint64(BigInt.from(int.parse(amount) & 0xFFFFFFFFFFFFFFFF).toInt()),
+              ),
+            );
+            
+            // Create GPS tuple (latitude, longitude) in micro-degrees
+            final gpsLatValue = XdrSCVal.forI128(
+              XdrInt128Parts(
+                XdrUint64(BigInt.from((latMicroDegrees >> 64) & 0xFFFFFFFFFFFFFFFF).toInt()),
+                XdrUint64(BigInt.from(latMicroDegrees & 0xFFFFFFFFFFFFFFFF).toInt()),
+              ),
+            );
+            final gpsLngValue = XdrSCVal.forI128(
+              XdrInt128Parts(
+                XdrUint64(BigInt.from((lngMicroDegrees >> 64) & 0xFFFFFFFFFFFFFFFF).toInt()),
+                XdrUint64(BigInt.from(lngMicroDegrees & 0xFFFFFFFFFFFFFFFF).toInt()),
+              ),
+            );
+            final gpsTuple = XdrSCVal.forVec([gpsLatValue, gpsLngValue]);
+            
+            // Build InvokeContractHostFunction operation
+            final invokeOperation = InvokeContractHostFunction(
+              contractAddress.toXdr(),
+              XdrSCSymbol('pay_merchant'),
+              [
+                driverAddressValue.toXdr(),
+                merchantAddressValue.toXdr(),
+                amountValue,
+                gpsTuple,
+              ],
+            );
+            
+            // Create transaction
+            final transaction = TransactionBuilder(account)
+                .addOperation(invokeOperation.toOperation())
+                .build();
+            
+            // Sign transaction
+            transaction.sign(keyPair, Network.TESTNET);
+            
+            // Submit to Soroban RPC
+            final response = await _sdk.sorobanServer.sendTransaction(transaction);
+            
+            if (response.status == GetTransactionStatus.SUCCESS) {
+              final txHash = response.hash;
+              AppLogger.info('Payment successful! Transaction hash: $txHash');
+              return Right(txHash);
+            } else if (response.status == GetTransactionStatus.ERROR) {
+              final errorMsg = response.error ?? 'Unknown transaction error';
+              AppLogger.error('Payment failed: $errorMsg');
+              return Left(Failure.blockchainError('Payment failed: $errorMsg'));
+            } else {
+              // Transaction pending
+              AppLogger.info('Transaction pending: ${response.hash}');
+              return Right(response.hash);
+            }
           } catch (e, stackTrace) {
             AppLogger.error('Error executing payment', e, stackTrace);
             return Left(Failure.blockchainError('Payment execution failed: ${e.toString()}'));
