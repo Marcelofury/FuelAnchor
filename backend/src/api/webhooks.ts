@@ -8,6 +8,7 @@ import { asyncHandler, AppError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
 import stellarService from '../services/stellar';
 import tokenMinting from '../services/tokenMinting';
+import { airtelService } from '../services/airtel';
 import db from '../services/database';
 import crypto from 'crypto';
 
@@ -156,33 +157,35 @@ router.post(
 router.post(
   '/airtel/callback',
   asyncHandler(async (req: Request, res: Response) => {
-    const { transaction } = req.body;
+    logger.info('Airtel Money callback received:', JSON.stringify(req.body));
 
-    logger.info('Airtel Money callback received:', JSON.stringify(transaction));
+    const result = airtelService.processCallback(req.body);
 
-    if (transaction?.status === 'SUCCESS') {
-      logger.info(`Airtel payment successful: ${transaction.id}`);
-      
+    if (result.success && result.transactionId && result.amount !== undefined) {
+      logger.info(`Airtel payment successful: ${result.transactionId} - ${result.amount} ${result.currency}`);
+
       // Credit user's wallet with FUEL tokens
       try {
-        const userProfile = await db.getUserProfile(''); // Get by phone logic needed
-        
+        const userProfile = await db.getUserProfile(''); // TODO: phone → userId lookup
         if (userProfile) {
           const mintResult = await tokenMinting.mintAndTransfer({
             userPublicKey: userProfile.stellar_public_key,
-            amount: parseFloat(transaction.amount),
-            currency: transaction.currency || 'KES',
-            transactionRef: transaction.id,
+            amount: result.amount,
+            currency: result.currency || 'KES',
+            transactionRef: result.transactionId,
             provider: 'airtel',
           });
-
           if (mintResult.success) {
             logger.info(`Credited ${mintResult.fuelAmount} FUEL via Airtel Money`);
+          } else {
+            logger.error(`Failed to mint FUEL: ${mintResult.error}`);
           }
         }
       } catch (error) {
-        logger.error('Error crediting wallet:', error);
+        logger.error('Error crediting wallet after Airtel callback:', error);
       }
+    } else {
+      logger.warn(`Airtel payment not successful`);
     }
 
     res.json({ status: 'received' });
