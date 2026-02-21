@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/config/api_config.dart';
 import '../../../../core/services/supabase_service.dart';
-import '../../../../core/config/supabase_config.dart';
+import '../../../../core/utils/logger.dart';
 
 class HistoryScreen extends ConsumerStatefulWidget {
   const HistoryScreen({super.key});
@@ -22,30 +25,42 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   }
 
   Future<void> _loadTransactions() async {
-    if (!SupabaseConfig.isConfigured) {
-      // Show placeholder data
-      setState(() {
-        _transactions = _getDummyTransactions();
-      });
-      return;
-    }
-
     setState(() => _isLoading = true);
 
     try {
-      if (SupabaseService.currentUser != null) {
-        final transactions = await SupabaseService.getTransactions(
-          SupabaseService.currentUser!.id,
-        );
+      final supabase = SupabaseService.client;
+      final session = supabase.auth.currentSession;
+      
+      if (session == null) {
+        AppLogger.warning('No authenticated session, showing dummy data');
+        setState(() {
+          _transactions = _getDummyTransactions();
+        });
+        return;
+      }
+
+      final response = await http.get(
+        Uri.parse(ApiConfig.transactions),
+        headers: ApiConfig.headers(authToken: session.accessToken),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final transactions = (data['data'] as List<dynamic>)
+            .map((txn) => txn as Map<String, dynamic>)
+            .toList();
+        
         setState(() {
           _transactions = transactions;
         });
       } else {
+        AppLogger.error('Failed to load transactions: ${response.statusCode}');
         setState(() {
           _transactions = _getDummyTransactions();
         });
       }
     } catch (e) {
+      AppLogger.error('Error loading transactions', e);
       setState(() {
         _transactions = _getDummyTransactions();
       });
