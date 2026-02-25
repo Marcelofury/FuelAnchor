@@ -20,6 +20,21 @@ class StellarService {
   static const String _fuelAssetIssuer = 'GCHWQJ4OVQBBOSWEQUXYXFMWVIINIMN2AXWU6FRKCB7YA6NPFFJOJXKX';
   static const String _sorobanContractId = 'CDRQE4CCMQP5AFZZQ6MFADSAAGXFQZQVUKX6H66AQW5BUDPDSB32ITNB';
 
+  // ─── UGX Testnet Token ──────────────────────────────────────────────────────
+  /// Testnet issuer address for the UGX simulation token.
+  /// In production this is the SEP-24 licensed anchor's issuer key.
+  static const String ISSUER_ADDRESS =
+      'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5';
+
+  static Asset get _ugxAsset =>
+      Asset.createNonNativeAsset('UGX', ISSUER_ADDRESS);
+
+  /// Hardcoded testnet manager secret — issues UGX to users in simulation.
+  /// In production, token issuance is triggered by a real M-Pesa webhook
+  /// hitting the backend anchor server (never stored client-side).
+  static const String _MANAGER_SECRET =
+      'SCZANGBA5RLMPI7S62UEF5SEALEFHRRP3NKRXK4HVSK3GVYFAT2GKLZ';
+
   StellarService({
     required FlutterSecureStorage secureStorage,
     bool useTestnet = true,
@@ -284,5 +299,117 @@ class StellarService {
       AppLogger.error('Failed to clear keypair', e, stackTrace);
       return const Left(Failure.storageError('Failed to clear keypair'));
     }
+  }
+
+  // ─── Mobile Money Simulation (Testnet) ─────────────────────────────────────
+
+  /// Simulates a Mobile Money deposit (M-Pesa / MTN MoMo) into a Stellar
+  /// Testnet wallet using a 3-step Virtual Mint flow:
+  ///   1. Friendbot  → funds account with XLM gas
+  ///   2. ChangeTrust → user account opts in to hold UGX token
+  ///   3. PaymentOp  → manager mints [amount] UGX to user
+  Future<Either<Failure, String>> simulateMobileMoneyDeposit({
+    required String userAddress,
+    required String userSecret,
+    String amount = '50000',
+  }) async {
+    try {
+      AppLogger.info('💰 Simulating Mobile Money deposit for $userAddress');
+
+      // Step 1 — Friendbot (XLM gas)
+      AppLogger.info('Step 1/3: Funding account via Friendbot...');
+      await FriendBot.fundTestAccount(userAddress);
+      AppLogger.info('✅ Step 1 complete: account has XLM for fees');
+
+      // Step 2 — ChangeTrust (user opts in to UGX)
+      AppLogger.info('Step 2/3: Establishing UGX trustline...');
+      await _establishUgxTrustline(
+        userAddress: userAddress,
+        userSecret: userSecret,
+      );
+      AppLogger.info('✅ Step 2 complete: account can hold UGX');
+
+      // Step 3 — PaymentOperation (manager issues tokens)
+      AppLogger.info('Step 3/3: Issuing $amount UGX tokens...');
+      await _issueUgxTokens(
+        recipientAddress: userAddress,
+        amount: amount,
+      );
+      AppLogger.info('✅ Step 3 complete: $amount UGX deposited');
+
+      final message =
+          'Successfully simulated ${_formatAmount(amount)} UGX deposit from Mobile Money';
+      AppLogger.info('🎉 $message');
+      return Right(message);
+    } on ErrorResponse catch (e) {
+      AppLogger.error('Stellar ErrorResponse during deposit simulation: ${e.body}');
+      return Left(Failure.blockchainError('Blockchain error: ${e.body}'));
+    } catch (e, stackTrace) {
+      AppLogger.error('Deposit simulation failed', e, stackTrace);
+      return Left(Failure.unknown('Deposit simulation failed: ${e.toString()}'));
+    }
+  }
+
+  /// Internal: signs and submits a ChangeTrustOperation for UGX asset.
+  Future<void> _establishUgxTrustline({
+    required String userAddress,
+    required String userSecret,
+  }) async {
+    final userKeyPair = KeyPair.fromSecretSeed(userSecret);
+    final account = await _sdk.accounts.account(userAddress);
+
+    final transaction = TransactionBuilder(account)
+        .addOperation(
+          ChangeTrustOperationBuilder(
+            ChangeTrustAsset.fromAsset(_ugxAsset),
+            '9000000000',
+          ).build(),
+        )
+        .setTimeout(30)
+        .build();
+
+    transaction.sign(userKeyPair, Network.TESTNET);
+
+    final response = await _sdk.submitTransaction(transaction);
+    if (!response.success) {
+      throw Exception('Trustline tx failed: ${response.resultXdr}');
+    }
+  }
+
+  /// Internal: manager account issues [amount] UGX to [recipientAddress].
+  Future<void> _issueUgxTokens({
+    required String recipientAddress,
+    required String amount,
+  }) async {
+    final managerKeyPair = KeyPair.fromSecretSeed(_MANAGER_SECRET);
+    final managerAccount =
+        await _sdk.accounts.account(managerKeyPair.accountId);
+
+    final transaction = TransactionBuilder(managerAccount)
+        .addOperation(
+          PaymentOperationBuilder(
+            recipientAddress,
+            _ugxAsset,
+            amount,
+          ).build(),
+        )
+        .setTimeout(30)
+        .build();
+
+    transaction.sign(managerKeyPair, Network.TESTNET);
+
+    final response = await _sdk.submitTransaction(transaction);
+    if (!response.success) {
+      throw Exception('UGX issuance tx failed: ${response.resultXdr}');
+    }
+  }
+
+  /// Formats a numeric string with thousands separators: '50000' → '50,000'.
+  String _formatAmount(String amount) {
+    final n = int.tryParse(amount) ?? 0;
+    return n.toString().replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (m) => '${m[1]},',
+        );
   }
 }
