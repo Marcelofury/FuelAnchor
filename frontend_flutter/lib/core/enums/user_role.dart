@@ -1,6 +1,7 @@
 enum UserRole {
   rider,
   fleetDriver,
+  fleetManager,
   merchant;
 
   String get displayName {
@@ -9,6 +10,8 @@ enum UserRole {
         return 'Rider';
       case UserRole.fleetDriver:
         return 'Fleet Driver';
+      case UserRole.fleetManager:
+        return 'Fleet Manager';
       case UserRole.merchant:
         return 'Merchant';
     }
