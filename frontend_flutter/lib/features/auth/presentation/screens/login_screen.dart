@@ -55,10 +55,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       case UserRole.fleetDriver:
         context.go('/fleet-dashboard');
         break;
+      case UserRole.fleetManager:
+        context.go('/fleet-tower');
+        break;
       case UserRole.merchant:
         context.go('/merchant-dashboard');
-        break;
-      default:
         break;
     }
   }
@@ -221,6 +222,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   subtitle: 'Fuel up and manage trips',
                   icon: Icons.local_shipping,
                   onTap: _isLoading ? null : () => _handleLogin(UserRole.fleetDriver),
+                ),
+                const SizedBox(height: 16),
+                // Fleet Manager Access Card
+                _AccessCard(
+                  title: 'Fleet Manager',
+                  subtitle: 'Oversee fleet, allocate budgets & track vehicles',
+                  icon: Icons.dashboard_customize,
+                  onTap: _isLoading ? null : () => _handleLogin(UserRole.fleetManager),
                 ),
                 const SizedBox(height: 16),
                 // Merchant Access Card

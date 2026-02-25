@@ -99,6 +99,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       roleData['national_id'] = _idController.text; // Store vehicle reg as national_id for now
                     } else if (_selectedRole == UserRole.fleetDriver) {
                       roleData['vehicle_id'] = _idController.text;
+                    } else if (_selectedRole == UserRole.fleetManager) {
+                      roleData['fleet_name'] = _idController.text;
                     } else if (_selectedRole == UserRole.merchant) {
                       roleData['station_id'] = _idController.text;
                       roleData['station_name'] = _nameController.text;
@@ -142,11 +144,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   case UserRole.fleetDriver:
                     context.go('/fleet-dashboard');
                     break;
+                  case UserRole.fleetManager:
+                    context.go('/fleet-tower');
+                    break;
                   case UserRole.merchant:
                     context.go('/merchant-dashboard');
                     break;
-                  default:
-                    context.go('/');
                 }
               }
             },
@@ -175,10 +178,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         return 'Vehicle Registration (Motorcycle/Bike)';
       case UserRole.fleetDriver:
         return 'Vehicle ID';
+      case UserRole.fleetManager:
+        return 'Company / Fleet Name';
       case UserRole.merchant:
         return 'Station ID';
-      default:
-        return 'ID Number';
     }
   }
 
@@ -264,6 +267,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       icon: Icons.local_shipping,
                       selected: _selectedRole == UserRole.fleetDriver,
                       onTap: () => setState(() => _selectedRole = UserRole.fleetDriver),
+                    ),
+                    _RoleChip(
+                      label: 'Fleet Manager',
+                      icon: Icons.dashboard_customize,
+                      selected: _selectedRole == UserRole.fleetManager,
+                      onTap: () => setState(() => _selectedRole = UserRole.fleetManager),
                     ),
                     _RoleChip(
                       label: 'Merchant',
