@@ -1,5 +1,6 @@
 /// FuelAnchor API Configuration
 /// Centralizes backend API endpoints and base URLs
+library;
 
 class ApiConfig {
   // Backend Base URLs
@@ -42,20 +43,6 @@ class ApiConfig {
   // ─── Credit Scoring Endpoints ────────────────────────────────────────────
   static String get creditScore => '$apiBase/credit/score';
   static String get creditHistory => '$apiBase/credit/history';
-
-  // ─── Relworx Payment Endpoints ───────────────────────────────────────────
-  static String get relworxValidatePhone => '$apiBase/relworx/validate-phone';
-  static String get relworxCollect => '$apiBase/relworx/collect';
-  static String get relworxDisburse => '$apiBase/relworx/disburse';
-  static String get relworxStatus => '$apiBase/relworx/status';
-  static String get relworxCallback => '$apiBase/relworx/callback';
-  static String get relworxBalance => '$apiBase/relworx/balance';
-  static String get relworxHistory => '$apiBase/relworx/history';
-
-  // ─── SEP-31 Cross-Border Endpoints ───────────────────────────────────────
-  static String get sep31Quote => '$apiBase/sep31/quote';
-  static String get sep31Transaction => '$apiBase/sep31/transaction';
-  static String sep31TransactionStatus(String id) => '$apiBase/sep31/transaction/$id';
 
   // ─── Analytics Endpoints ─────────────────────────────────────────────────
   static String get analyticsOverview => '$apiBase/analytics/overview';
