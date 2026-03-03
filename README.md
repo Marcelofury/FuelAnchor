@@ -77,6 +77,5 @@ MIT License - See [LICENSE](LICENSE)
 
 ---
 
-**Built for East Africa** 🚀 Powered by Stellar ⭐
-=======
->>>>>>> 4543ed501007b4e835d85fe7bc7e074bc083c172
+**Built for East Africa**  Powered by Stellar 
+
