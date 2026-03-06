@@ -203,22 +203,22 @@ class _MobileMoneyDepositScreenState
       bottomNavigationBar: Container(
         color: AppColors.navy,
         padding: const EdgeInsets.all(16),
-        child: SafeArea(
+        child: const SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.security,
                     color: AppColors.electricGreen,
                     size: 16,
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Secure payment powered by Stellar SEP-24',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.white70,
                         fontSize: 12,
                       ),
@@ -226,10 +226,10 @@ class _MobileMoneyDepositScreenState
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               Text(
                 'Supported: M-Pesa, MTN Mobile Money, Airtel Money',
-                style: const TextStyle(
+                style: TextStyle(
                   color: Colors.white54,
                   fontSize: 10,
                 ),
