@@ -361,11 +361,11 @@ class StellarService {
     final transaction = TransactionBuilder(account)
         .addOperation(
           ChangeTrustOperationBuilder(
-            ChangeTrustAsset.fromAsset(_ugxAsset),
+            _ugxAsset,
             '9000000000',
           ).build(),
         )
-        .setTimeout(30)
+        .addTimeBounds(TimeBounds.expiresAfter(30))
         .build();
 
     transaction.sign(userKeyPair, Network.TESTNET);
@@ -393,7 +393,7 @@ class StellarService {
             amount,
           ).build(),
         )
-        .setTimeout(30)
+        .addTimeBounds(TimeBounds.expiresAfter(30))
         .build();
 
     transaction.sign(managerKeyPair, Network.TESTNET);
