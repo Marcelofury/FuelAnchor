@@ -12,13 +12,13 @@ class Sep24WebViewScreen extends StatefulWidget {
   final Function()? onCancel;
 
   const Sep24WebViewScreen({
-    Key? key,
+    super.key,
     required this.url,
     required this.title,
     this.onSuccess,
     this.onError,
     this.onCancel,
-  }) : super(key: key);
+  });
 
   @override
   State<Sep24WebViewScreen> createState() => _Sep24WebViewScreenState();
@@ -122,16 +122,16 @@ class _Sep24WebViewScreenState extends State<Sep24WebViewScreen> {
 
     // Show success message
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+      const SnackBar(
         content: Row(
           children: [
             Icon(Icons.check_circle, color: Colors.white),
-            const SizedBox(width: 8),
-            const Text('Transaction completed successfully!'),
+            SizedBox(width: 8),
+            Text('Transaction completed successfully!'),
           ],
         ),
         backgroundColor: AppColors.success,
-        duration: const Duration(seconds: 3),
+        duration: Duration(seconds: 3),
       ),
     );
 
