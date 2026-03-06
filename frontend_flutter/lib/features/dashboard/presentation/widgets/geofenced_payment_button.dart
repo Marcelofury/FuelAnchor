@@ -13,14 +13,14 @@ class GeofencedPaymentButton extends ConsumerStatefulWidget {
   final double? maxDistance;
 
   const GeofencedPaymentButton({
-    Key? key,
+    super.key,
     required this.stationLatitude,
     required this.stationLongitude,
     required this.stationName,
     required this.amount,
     required this.onPaymentAuthorized,
     this.maxDistance,
-  }) : super(key: key);
+  });
 
   @override
   ConsumerState<GeofencedPaymentButton> createState() =>
@@ -83,11 +83,11 @@ class _GeofencedPaymentButtonState
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Row(
+        title: const Row(
           children: [
             Icon(Icons.location_off, color: Colors.red, size: 28),
-            const SizedBox(width: 12),
-            const Text('Location Required'),
+            SizedBox(width: 12),
+            Text('Location Required'),
           ],
         ),
         content: Column(
@@ -143,7 +143,7 @@ class _GeofencedPaymentButtonState
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.check_circle,
                     color: AppColors.success,
                     size: 20,
@@ -151,7 +151,7 @@ class _GeofencedPaymentButtonState
                   const SizedBox(width: 8),
                   Text(
                     'Distance: ${geofencingService.formatDistance(_distance!)}',
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppColors.success,
                       fontWeight: FontWeight.w600,
                     ),
@@ -206,7 +206,7 @@ class _GeofencedPaymentButtonState
               elevation: 2,
             ),
             child: _isValidating
-                ? Row(
+                ? const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       SizedBox(
@@ -219,8 +219,8 @@ class _GeofencedPaymentButtonState
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      const Text('Validating Location...'),
+                      SizedBox(width: 12),
+                      Text('Validating Location...'),
                     ],
                   )
                 : Row(
