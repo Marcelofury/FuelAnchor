@@ -1,5 +1,6 @@
 /// Relworx Mobile Money Payment Widget
 /// Handles MTN and Airtel Uganda mobile money payments through Relworx gateway
+library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
