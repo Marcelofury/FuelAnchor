@@ -5,7 +5,7 @@ import 'package:fuelanchor/core/constants/app_colors.dart';
 
 /// Screen for fleet operators to generate fuel vouchers for drivers
 class VoucherGeneratorScreen extends ConsumerStatefulWidget {
-  const VoucherGeneratorScreen({Key? key}) : super(key: key);
+  const VoucherGeneratorScreen({super.key});
 
   @override
   ConsumerState<VoucherGeneratorScreen> createState() =>
@@ -52,12 +52,12 @@ class _VoucherGeneratorScreenState
 
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Row(
             children: [
               Icon(Icons.check_circle, color: Colors.white),
-              const SizedBox(width: 8),
-              const Text('Voucher generated successfully!'),
+              SizedBox(width: 8),
+              Text('Voucher generated successfully!'),
             ],
           ),
           backgroundColor: AppColors.success,
@@ -112,7 +112,7 @@ class _VoucherGeneratorScreenState
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.confirmation_number, 
+                    const Icon(Icons.confirmation_number, 
                       color: AppColors.navy, 
                       size: 32
                     ),
@@ -121,7 +121,7 @@ class _VoucherGeneratorScreenState
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          const Text(
                             'Create Fuel Voucher',
                             style: TextStyle(
                               fontSize: 18,
@@ -152,7 +152,7 @@ class _VoucherGeneratorScreenState
                 decoration: InputDecoration(
                   labelText: 'Voucher Amount (FUEL)',
                   hintText: 'Enter amount in FUEL tokens',
-                  prefixIcon: Icon(Icons.account_balance_wallet, 
+                  prefixIcon: const Icon(Icons.account_balance_wallet, 
                     color: AppColors.navy
                   ),
                   border: OutlineInputBorder(
@@ -164,7 +164,7 @@ class _VoucherGeneratorScreenState
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.navy, width: 2),
+                    borderSide: const BorderSide(color: AppColors.navy, width: 2),
                   ),
                 ),
                 validator: (value) {
@@ -186,7 +186,7 @@ class _VoucherGeneratorScreenState
                 decoration: InputDecoration(
                   labelText: 'Driver ID / Public Key',
                   hintText: 'Enter driver\'s Stellar address',
-                  prefixIcon: Icon(Icons.person, color: AppColors.navy),
+                  prefixIcon: const Icon(Icons.person, color: AppColors.navy),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -196,7 +196,7 @@ class _VoucherGeneratorScreenState
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.navy, width: 2),
+                    borderSide: const BorderSide(color: AppColors.navy, width: 2),
                   ),
                 ),
                 validator: (value) {
@@ -215,7 +215,7 @@ class _VoucherGeneratorScreenState
                 decoration: InputDecoration(
                   label: const Text('Notes (Optional)'),
                   hintText: 'Add notes about this voucher',
-                  prefixIcon: Icon(Icons.note, color: AppColors.navy),
+                  prefixIcon: const Icon(Icons.note, color: AppColors.navy),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -225,7 +225,7 @@ class _VoucherGeneratorScreenState
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.navy, width: 2),
+                    borderSide: const BorderSide(color: AppColors.navy, width: 2),
                   ),
                 ),
               ),
@@ -246,9 +246,9 @@ class _VoucherGeneratorScreenState
                   ),
                   child: _isGenerating
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : Row(
+                      : const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
+                          children: [
                             Icon(Icons.add_circle_outline),
                             SizedBox(width: 8),
                             Text(
@@ -283,14 +283,14 @@ class _VoucherGeneratorScreenState
                   child: Column(
                     children: [
                       // Success header
-                      Row(
+                      const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(Icons.check_circle, 
                             color: AppColors.success, 
                             size: 32
                           ),
-                          const SizedBox(width: 8),
+                          SizedBox(width: 8),
                           Text(
                             'Voucher Generated!',
                             style: TextStyle(
@@ -328,7 +328,7 @@ class _VoucherGeneratorScreenState
                         ),
                         child: SelectableText(
                           _generatedVoucherCode!,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                             fontFamily: 'monospace',
@@ -360,7 +360,7 @@ class _VoucherGeneratorScreenState
                               label: const Text('New Voucher'),
                               style: OutlinedButton.styleFrom(
                                 padding: const EdgeInsets.all(12),
-                                side: BorderSide(color: AppColors.navy),
+                                side: const BorderSide(color: AppColors.navy),
                               ),
                             ),
                           ),
