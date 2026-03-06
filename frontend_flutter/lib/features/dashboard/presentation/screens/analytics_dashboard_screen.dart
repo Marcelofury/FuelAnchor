@@ -9,10 +9,10 @@ class AnalyticsDashboardScreen extends ConsumerStatefulWidget {
   final String userId;
 
   const AnalyticsDashboardScreen({
-    Key? key,
+    super.key,
     required this.userRole,
     required this.userId,
-  }) : super(key: key);
+  });
 
   @override
   ConsumerState<AnalyticsDashboardScreen> createState() =>
@@ -148,7 +148,7 @@ class _AnalyticsDashboardScreenState
                 ),
                 child: Text(
                   trend,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
                     color: AppColors.success,
@@ -219,7 +219,7 @@ class _AnalyticsDashboardScreenState
           const SizedBox(height: 16),
           
           // Mock chart visualization
-          Container(
+          SizedBox(
             height: 150,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -231,7 +231,7 @@ class _AnalyticsDashboardScreenState
                   height: heights[index % heights.length].toDouble(),
                   decoration: BoxDecoration(
                     color: AppColors.accent.withOpacity(0.7),
-                    borderRadius: BorderRadius.vertical(
+                    borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(4),
                     ),
                   ),
@@ -404,10 +404,10 @@ class _AnalyticsDashboardScreenState
     await Future.delayed(const Duration(seconds: 1));
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Analytics refreshed'),
+        const SnackBar(
+          content: Text('Analytics refreshed'),
           backgroundColor: AppColors.success,
-          duration: const Duration(seconds: 2),
+          duration: Duration(seconds: 2),
         ),
       );
     }
