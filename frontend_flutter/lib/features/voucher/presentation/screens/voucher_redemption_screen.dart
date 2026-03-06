@@ -5,7 +5,7 @@ import 'package:fuelanchor/core/constants/app_colors.dart';
 
 /// Screen for drivers/riders to redeem fuel vouchers
 class VoucherRedemptionScreen extends ConsumerStatefulWidget {
-  const VoucherRedemptionScreen({Key? key}) : super(key: key);
+  const VoucherRedemptionScreen({super.key});
 
   @override
   ConsumerState<VoucherRedemptionScreen> createState() =>
@@ -80,11 +80,11 @@ class _VoucherRedemptionScreenState
           context: context,
           barrierDismissible: false,
           builder: (context) => AlertDialog(
-            title: Row(
+            title: const Row(
               children: [
                 Icon(Icons.check_circle, color: AppColors.success, size: 32),
-                const SizedBox(width: 12),
-                const Text('Success!'),
+                SizedBox(width: 12),
+                Text('Success!'),
               ],
             ),
             content: Column(
@@ -103,14 +103,14 @@ class _VoucherRedemptionScreenState
                   ),
                   child: Column(
                     children: [
-                      Icon(Icons.account_balance_wallet, 
+                      const Icon(Icons.account_balance_wallet, 
                         color: AppColors.success, 
                         size: 48
                       ),
                       const SizedBox(height: 8),
                       Text(
                         '+${_voucherDetails!['amount']} FUEL',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.w700,
                           color: AppColors.success,
@@ -209,9 +209,9 @@ class _VoucherRedemptionScreenState
               color: Colors.black87,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Text(
+            child: const Text(
               'Scan the voucher QR code',
-              style: const TextStyle(
+              style: TextStyle(
                 color: Colors.white,
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -258,13 +258,13 @@ class _VoucherRedemptionScreenState
             ),
             child: Row(
               children: [
-                Icon(Icons.redeem, color: AppColors.electricGreen, size: 32),
+                const Icon(Icons.redeem, color: AppColors.electricGreen, size: 32),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         'Redeem Fuel Voucher',
                         style: TextStyle(
                           fontSize: 18,
@@ -294,7 +294,7 @@ class _VoucherRedemptionScreenState
             decoration: InputDecoration(
               labelText: 'Voucher Code',
               hintText: 'Enter or scan voucher code',
-              prefixIcon: Icon(Icons.confirmation_number, 
+              prefixIcon: const Icon(Icons.confirmation_number, 
                 color: AppColors.navy
               ),
               suffixIcon: _voucherCodeController.text.isNotEmpty
@@ -312,7 +312,7 @@ class _VoucherRedemptionScreenState
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: AppColors.navy, width: 2),
+                borderSide: const BorderSide(color: AppColors.navy, width: 2),
               ),
             ),
             onChanged: (_) => setState(() {}),
@@ -335,9 +335,9 @@ class _VoucherRedemptionScreenState
               ),
               child: _isRedeeming && _voucherDetails == null
                   ? const CircularProgressIndicator(color: Colors.white)
-                  : Row(
+                  : const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
+                      children: [
                         Icon(Icons.verified),
                         SizedBox(width: 8),
                         Text(
@@ -376,7 +376,7 @@ class _VoucherRedemptionScreenState
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
+                      const Text(
                         'Voucher Details',
                         style: TextStyle(
                           fontSize: 18,
@@ -416,14 +416,14 @@ class _VoucherRedemptionScreenState
                       ),
                       child: Column(
                         children: [
-                          Icon(Icons.account_balance_wallet, 
+                          const Icon(Icons.account_balance_wallet, 
                             color: AppColors.electricGreen, 
                             size: 48
                           ),
                           const SizedBox(height: 8),
                           Text(
                             '${_voucherDetails!['amount']} FUEL',
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 32,
                               fontWeight: FontWeight.w800,
                               color: AppColors.electricGreen,
@@ -470,9 +470,9 @@ class _VoucherRedemptionScreenState
                       ),
                       child: _isRedeeming
                           ? const CircularProgressIndicator(color: Colors.white)
-                          : Row(
+                          : const Row(
                               mainAxisAlignment: MainAxisAlignment.center,
-                              children: const [
+                              children: [
                                 Icon(Icons.redeem, size: 24),
                                 SizedBox(width: 8),
                                 Text(
