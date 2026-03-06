@@ -6,7 +6,7 @@ import 'package:fuelanchor/core/providers/biometric_providers.dart';
 /// Biometric Settings Screen
 /// Allows users to enable/disable biometric authentication
 class BiometricSettingsScreen extends ConsumerWidget {
-  const BiometricSettingsScreen({Key? key}) : super(key: key);
+  const BiometricSettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -183,7 +183,7 @@ class BiometricSettingsScreen extends ConsumerWidget {
               ),
             ),
             value: enabled,
-            activeColor: AppColors.success,
+            activeThumbColor: AppColors.success,
             onChanged: (value) async {
               if (value) {
                 await _enableBiometric(context, ref);
@@ -348,8 +348,8 @@ class BiometricSettingsScreen extends ConsumerWidget {
       data: (enabled) {
         if (enabled) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('✓ Biometric authentication enabled'),
+            const SnackBar(
+              content: Text('✓ Biometric authentication enabled'),
               backgroundColor: AppColors.success,
             ),
           );
@@ -391,11 +391,11 @@ class BiometricSettingsScreen extends ConsumerWidget {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: Row(
+          title: const Row(
             children: [
               Icon(Icons.check_circle, color: AppColors.success),
-              const SizedBox(width: 8),
-              const Text('Success!'),
+              SizedBox(width: 8),
+              Text('Success!'),
             ],
           ),
           content: const Text('Biometric authentication is working correctly.'),
