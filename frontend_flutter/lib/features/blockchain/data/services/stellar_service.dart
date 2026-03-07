@@ -132,7 +132,7 @@ class StellarService {
             // If FUEL token not found, check if trustline exists
             if (fuelBalance == null) {
               AppLogger.info('FUEL token not found in balances. User may need to establish trustline.');
-              return Right(WalletBalance(
+              return const Right(WalletBalance(
                 assetCode: _fuelAssetCode,
                 balance: '0',
                 assetIssuer: _fuelAssetIssuer,
