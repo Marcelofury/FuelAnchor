@@ -2,23 +2,44 @@
 -- Date: 2026-03-07
 -- Purpose: Enable username/password authentication stored directly in database
 
--- Drop existing foreign key constraint to auth.users
+-- Step 1: Drop all existing data (CAREFUL - only for development)
+-- TRUNCATE TABLE public.transactions CASCADE;
+-- TRUNCATE TABLE public.fuel_quotas CASCADE;
+-- TRUNCATE TABLE public.rider_profiles CASCADE;
+-- TRUNCATE TABLE public.fleet_driver_profiles CASCADE;
+-- TRUNCATE TABLE public.merchant_profiles CASCADE;
+-- TRUNCATE TABLE public.profiles CASCADE;
+
+-- Step 2: Drop existing foreign key constraint to auth.users
 ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_id_fkey;
 
--- Add username and password_hash columns
+-- Step 3: Make id column independent (remove PRIMARY KEY temporarily if needed)
+ALTER TABLE public.profiles ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE public.profiles ALTER COLUMN id SET DEFAULT uuid_generate_v4();
+
+-- Step 4: Add username and password_hash columns
 ALTER TABLE public.profiles 
-    ADD COLUMN IF NOT EXISTS username TEXT UNIQUE,
+    ADD COLUMN IF NOT EXISTS username TEXT,
     ADD COLUMN IF NOT EXISTS password_hash TEXT;
 
--- Make id column use UUID default instead of referencing auth.users
-ALTER TABLE public.profiles 
-    ALTER COLUMN id SET DEFAULT uuid_generate_v4();
+-- Step 5: Make username and password_hash NOT NULL (after adding columns)
+-- First, update any existing rows with dummy values (if any exist)
+UPDATE public.profiles SET username = 'user_' || id::text WHERE username IS NULL;
+UPDATE public.profiles SET password_hash = 'legacy_' || id::text WHERE password_hash IS NULL;
 
--- Update role check constraint to include fleet_manager
+-- Now make them NOT NULL
+ALTER TABLE public.profiles ALTER COLUMN username SET NOT NULL;
+ALTER TABLE public.profiles ALTER COLUMN password_hash SET NOT NULL;
+
+-- Step 6: Add unique constraint on username
+ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_username_key;
+ALTER TABLE public.profiles ADD CONSTRAINT profiles_username_key UNIQUE (username);
+
+-- Step 7: Update role check constraint to include fleet_manager
 ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_role_check;
 ALTER TABLE public.profiles 
     ADD CONSTRAINT profiles_role_check 
-    CHECK (role IN ('rider', 'fleet_driver', 'fleet_manager', 'merchant'));
+    CHECK (role IN ('rider', 'fleet_driver', 'fleetDriver', 'fleet_manager', 'fleetManager', 'merchant'));
 
 -- Create index on username for faster lookups
 CREATE INDEX IF NOT EXISTS idx_profiles_username ON public.profiles(username);
