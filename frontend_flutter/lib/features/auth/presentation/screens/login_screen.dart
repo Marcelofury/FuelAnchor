@@ -85,39 +85,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         throw Exception('Supabase is not configured. Please contact administrator.');
       }
 
-      // 2. Sign in with Supabase
-      final email = SupabaseService.usernameToEmail(_usernameController.text);
-      final authResponse = await SupabaseService.signIn(
-        email: email,
+      // 2. Authenticate with database
+      final profileData = await SupabaseService.authenticateUser(
+        username: _usernameController.text,
         password: _passwordController.text,
       );
 
-      if (authResponse.user == null) {
-        throw Exception('Login failed. Please check your credentials.');
+      if (profileData == null) {
+        throw Exception('Invalid username or password');
       }
 
       // 3. Store user info in secure storage
       const storage = FlutterSecureStorage();
-      await storage.write(key: 'supabase_user_id', value: authResponse.user!.id);
+      await storage.write(key: 'supabase_user_id', value: profileData['id'] as String);
       await storage.write(key: 'auth_username', value: _usernameController.text);
-
-      // 4. Fetch user profile from Supabase
-      final profileData = await SupabaseService.getProfile(authResponse.user!.id);
-      if (profileData == null) {
-        throw Exception('User profile not found. Please contact support.');
-      }
       
-      // 5. Parse role from profile
+      // 4. Parse role from profile
       final roleString = profileData['role'] as String;
       final role = UserRole.values.firstWhere(
         (r) => r.name == roleString,
         orElse: () => UserRole.rider,
       );
       
-      // 6. Set role locally
+      // 5. Set role locally
       ref.read(userRoleNotifierProvider.notifier).setRole(role);
       
-      // 7. Create local profile cache from Supabase data
+      // 6. Create local profile cache from database data
       final profile = UserProfile(
         publicKey: profileData['stellar_public_key'] as String,
         role: role,
@@ -130,7 +123,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         nationalId: null,
       );
       
-      // 8. Save profile locally
+      // 7. Save profile locally
       await ref.read(userProfileNotifierProvider.notifier).saveProfile(profile);
       
       if (mounted) {
