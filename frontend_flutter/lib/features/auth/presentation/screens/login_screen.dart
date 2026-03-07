@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/enums/user_role.dart';
+import '../../../../core/services/supabase_service.dart';
+import '../../../../core/config/supabase_config.dart';
+import '../../domain/entities/user_profile.dart';
 import '../../providers/providers.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -77,41 +80,68 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
+      // 1. Check if Supabase is configured
+      if (!SupabaseConfig.isConfigured) {
+        throw Exception('Supabase is not configured. Please contact administrator.');
+      }
+
+      // 2. Sign in with Supabase
+      final email = SupabaseService.usernameToEmail(_usernameController.text);
+      final authResponse = await SupabaseService.signIn(
+        email: email,
+        password: _passwordController.text,
+      );
+
+      if (authResponse.user == null) {
+        throw Exception('Login failed. Please check your credentials.');
+      }
+
+      // 3. Store user info in secure storage
       const storage = FlutterSecureStorage();
-      
-      // Get stored credentials
-      final storedUsername = await storage.read(key: 'auth_username');
-      final storedPassword = await storage.read(key: 'auth_password');
-      
-      // Validate credentials
-      if (storedUsername == null || storedPassword == null) {
-        throw Exception('No account found. Please register first.');
+      await storage.write(key: 'supabase_user_id', value: authResponse.user!.id);
+      await storage.write(key: 'auth_username', value: _usernameController.text);
+
+      // 4. Fetch user profile from Supabase
+      final profileData = await SupabaseService.getProfile(authResponse.user!.id);
+      if (profileData == null) {
+        throw Exception('User profile not found. Please contact support.');
       }
       
-      if (_usernameController.text != storedUsername || 
-          _passwordController.text != storedPassword) {
-        throw Exception('Invalid username or password');
-      }
-      
-      // Load profile to get role
-      await ref.read(userProfileNotifierProvider.notifier).refresh();
-      final profileAsync = ref.read(userProfileNotifierProvider);
-      
-      final profile = profileAsync.when(
-        data: (data) => data,
-        loading: () => null,
-        error: (e, st) => null,
+      // 5. Parse role from profile
+      final roleString = profileData['role'] as String;
+      final role = UserRole.values.firstWhere(
+        (r) => r.name == roleString,
+        orElse: () => UserRole.rider,
       );
       
-      if (profile == null) {
-        throw Exception('User profile not found. Please register again.');
-      }
+      // 6. Set role locally
+      ref.read(userRoleNotifierProvider.notifier).setRole(role);
       
-      // Set role
-      ref.read(userRoleNotifierProvider.notifier).setRole(profile.role);
+      // 7. Create local profile cache from Supabase data
+      final profile = UserProfile(
+        publicKey: profileData['stellar_public_key'] as String,
+        role: role,
+        name: profileData['full_name'] as String,
+        phone: profileData['phone_number'] as String,
+        vehicleId: null, // Can be fetched from role-specific tables if needed
+        fleetName: null,
+        stationId: null,
+        stationName: null,
+        nationalId: null,
+      );
+      
+      // 8. Save profile locally
+      await ref.read(userProfileNotifierProvider.notifier).saveProfile(profile);
       
       if (mounted) {
-        _navigateToDashboard(profile.role);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Login successful!'),
+            duration: Duration(seconds: 1),
+            backgroundColor: AppColors.electricGreen,
+          ),
+        );
+        _navigateToDashboard(role);
       }
     } catch (e) {
       if (mounted) {
