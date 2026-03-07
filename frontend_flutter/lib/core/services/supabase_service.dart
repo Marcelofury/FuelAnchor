@@ -135,6 +135,27 @@ class SupabaseService {
     return response;
   }
 
+  /// Get user profile by phone number
+  static Future<Map<String, dynamic>?> getProfileByPhone(
+    String phoneNumber,
+  ) async {
+    final response = await client
+        .from('profiles')
+        .select()
+        .eq('phone_number', phoneNumber)
+        .maybeSingle();
+    
+    return response;
+  }
+
+  /// Convert username/phone to email format for Supabase auth
+  static String usernameToEmail(String username) {
+    // If already an email, return as is
+    if (username.contains('@')) return username;
+    // Otherwise, convert username to email format
+    return '$username@fuelanchor.app';
+  }
+
   /// Record transaction
   static Future<void> recordTransaction({
     required String blockchainHash,
