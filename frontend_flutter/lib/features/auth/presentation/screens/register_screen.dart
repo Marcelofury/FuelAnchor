@@ -6,6 +6,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/enums/user_role.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../core/config/supabase_config.dart';
+import '../../../../core/utils/logger.dart';
 import '../../domain/entities/user_profile.dart';
 import '../../providers/providers.dart';
 
@@ -54,9 +55,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     setState(() => _isLoading = true);
 
     try {
+      // 1. Check if Supabase is configured
+      if (!SupabaseConfig.isConfigured) {
+        throw Exception('Supabase is not configured. Please contact administrator.');
+      }
+
       final stellarService = ref.read(stellarServiceProvider);
       
-      // 1. Generate Stellar keypair first
+      // 2. Generate Stellar keypair first
       final keypairResult = await stellarService.generateAndStoreKeypair();
       
       await keypairResult.fold(
@@ -64,132 +70,135 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           throw Exception(failure.message);
         },
         (keypair) async {
-          // 2. Fund testnet account
-          final fundResult = await stellarService.fundTestnetAccount();
+          // 3. Fund testnet account (optional - continue even if it fails)
+          try {
+            final fundResult = await stellarService.fundTestnetAccount();
+            fundResult.fold(
+              (failure) {
+                AppLogger.warning('Testnet funding failed: ${failure.message}. Continuing with registration.');
+              },
+              (_) {
+                AppLogger.info('Testnet account funded successfully');
+              },
+            );
+          } catch (e) {
+            AppLogger.warning('Testnet funding error: $e. Continuing with registration.');
+          }
           
-          await fundResult.fold(
-            (failure) {
-              throw Exception('Failed to fund account: ${failure.message}');
-            },
-            (_) async {
-              // 3. Create Supabase account if configured
-              String? supabaseUserId;
+          // 4. Create Supabase account (REQUIRED)
+          String supabaseUserId;
+          
+          try {
+            // Use username as email (username@fuelanchor.app)
+            final email = SupabaseService.usernameToEmail(_usernameController.text);
+            final password = _passwordController.text;
               
-              if (SupabaseConfig.isConfigured) {
-                try {
-                  // Use phone number as email (phone@fuelanchor.app)
-                  final email = '${_phoneController.text}@fuelanchor.app';
-                  final password = keypair.accountId; // Use stellar key as password
-                  
-                  final authResponse = await SupabaseService.signUp(
-                    email: email,
-                    password: password,
-                    metadata: {
-                      'full_name': _nameController.text,
-                      'phone': _phoneController.text,
-                      'role': _selectedRole.name,
-                    },
-                  );
+            final authResponse = await SupabaseService.signUp(
+              email: email,
+              password: password,
+              metadata: {
+                'full_name': _nameController.text,
+                'phone': _phoneController.text,
+                'role': _selectedRole.name,
+                'username': _usernameController.text,
+              },
+            );
 
-                  if (authResponse.user != null) {
-                    supabaseUserId = authResponse.user!.id;
-                    
-                    // Create profile in Supabase
-                    await SupabaseService.createProfile(
-                      userId: supabaseUserId,
-                      fullName: _nameController.text,
-                      phoneNumber: _phoneController.text,
-                      role: _selectedRole.name,
-                      stellarPublicKey: keypair.accountId,
-                    );
+            if (authResponse.user == null) {
+              throw Exception('Failed to create Supabase user account');
+            }
 
-                    // Create role-specific profile
-                    final Map<String, dynamic> roleData = {};
-                    if (_selectedRole == UserRole.rider) {
-                      roleData['national_id'] = _idController.text; // Store vehicle reg as national_id for now
-                    } else if (_selectedRole == UserRole.fleetDriver) {
-                      roleData['vehicle_id'] = _idController.text;
-                    } else if (_selectedRole == UserRole.fleetManager) {
-                      roleData['fleet_name'] = _idController.text;
-                    } else if (_selectedRole == UserRole.merchant) {
-                      roleData['station_id'] = _idController.text;
-                      roleData['station_name'] = _nameController.text;
-                    }
+            supabaseUserId = authResponse.user!.id;
+            
+            // Store Supabase user ID in secure storage
+            const storage = FlutterSecureStorage();
+            await storage.write(key: 'supabase_user_id', value: supabaseUserId);
+            await storage.write(key: 'auth_username', value: _usernameController.text);
+            
+            // Create profile in Supabase
+            await SupabaseService.createProfile(
+              userId: supabaseUserId,
+              fullName: _nameController.text,
+              phoneNumber: _phoneController.text,
+              role: _selectedRole.name,
+              stellarPublicKey: keypair.accountId,
+            );
 
-                    if (roleData.isNotEmpty) {
-                      await SupabaseService.createRoleProfile(
-                        userId: supabaseUserId,
-                        role: _selectedRole.name,
-                        additionalData: roleData,
-                      );
-                    }
-                  }
-                } catch (e) {
-                  // Supabase error - continue with local-only mode
-                  print('Supabase registration failed (using local mode): $e');
-                }
-              }
-              
-              // 4. Set user role locally
-              ref.read(userRoleNotifierProvider.notifier).setRole(_selectedRole);
-              
-              // 5. Store username and password securely
-              const storage = FlutterSecureStorage();
-              await storage.write(key: 'auth_username', value: _usernameController.text);
-              await storage.write(key: 'auth_password', value: _passwordController.text);
-              
-              // 6. Save user profile locally
-              final publicKey = await ref.read(stellarServiceProvider).getPublicKey();
-              publicKey.fold(
-                (failure) => print('Failed to get public key for profile'),
-                (pubKey) async {
-                  final profile = UserProfile(
-                    publicKey: pubKey,
-                    role: _selectedRole,
-                    name: _nameController.text,
-                    phone: _phoneController.text,
-                    vehicleId: _selectedRole == UserRole.fleetDriver ? _idController.text : null,
-                    fleetName: _selectedRole == UserRole.fleetManager ? _idController.text : null,
-                    stationId: _selectedRole == UserRole.merchant ? _idController.text : null,
-                    stationName: _selectedRole == UserRole.merchant ? _nameController.text : null,
-                    nationalId: _selectedRole == UserRole.rider ? _idController.text : null,
-                  );
-                  
-                  await ref.read(userProfileNotifierProvider.notifier).saveProfile(profile);
-                },
+            // Create role-specific profile
+            final Map<String, dynamic> roleData = {};
+            if (_selectedRole == UserRole.rider) {
+              roleData['national_id'] = _idController.text;
+            } else if (_selectedRole == UserRole.fleetDriver) {
+              roleData['vehicle_id'] = _idController.text;
+            } else if (_selectedRole == UserRole.fleetManager) {
+              roleData['fleet_name'] = _idController.text;
+            } else if (_selectedRole == UserRole.merchant) {
+              roleData['station_id'] = _idController.text;
+              roleData['station_name'] = _nameController.text;
+            }
+
+            if (roleData.isNotEmpty) {
+              await SupabaseService.createRoleProfile(
+                userId: supabaseUserId,
+                role: _selectedRole.name,
+                additionalData: roleData,
+              );
+            }
+            
+            AppLogger.info('Supabase user registered successfully: $supabaseUserId');
+          } catch (e) {
+            // Supabase error - registration fails
+            throw Exception('Failed to register with Supabase: $e');
+          }
+          
+          // 5. Set user role locally
+          ref.read(userRoleNotifierProvider.notifier).setRole(_selectedRole);
+          
+          // 6. Save user profile locally (cache)
+          final publicKey = await ref.read(stellarServiceProvider).getPublicKey();
+          publicKey.fold(
+            (failure) => AppLogger.warning('Failed to get public key for profile'),
+            (pubKey) async {
+              final profile = UserProfile(
+                publicKey: pubKey,
+                role: _selectedRole,
+                name: _nameController.text,
+                phone: _phoneController.text,
+                vehicleId: _selectedRole == UserRole.fleetDriver ? _idController.text : null,
+                fleetName: _selectedRole == UserRole.fleetManager ? _idController.text : null,
+                stationId: _selectedRole == UserRole.merchant ? _idController.text : null,
+                stationName: _selectedRole == UserRole.merchant ? _nameController.text : null,
+                nationalId: _selectedRole == UserRole.rider ? _idController.text : null,
               );
               
-              if (mounted) {
-                final message = supabaseUserId != null
-                    ? 'Account created in database!'
-                    : 'Account created locally! Public Key: ${keypair.accountId.substring(0, 8)}...';
-                    
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(message),
-                    duration: const Duration(seconds: 3),
-                    backgroundColor: AppColors.electricGreen,
-                  ),
-                );
-
-                // Navigate to appropriate dashboard
-                switch (_selectedRole) {
-                  case UserRole.rider:
-                    context.go('/rider-dashboard');
-                    break;
-                  case UserRole.fleetDriver:
-                    context.go('/fleet-dashboard');
-                    break;
-                  case UserRole.fleetManager:
-                    context.go('/fleet-tower');
-                    break;
-                  case UserRole.merchant:
-                    context.go('/merchant-dashboard');
-                    break;
-                }
-              }
+              await ref.read(userProfileNotifierProvider.notifier).saveProfile(profile);
             },
           );
+          
+          if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Account created successfully!'),
+                    duration: Duration(seconds: 2),
+              ),
+            );
+
+            // Navigate to appropriate dashboard
+            switch (_selectedRole) {
+              case UserRole.rider:
+                context.go('/rider-dashboard');
+                break;
+              case UserRole.fleetDriver:
+                context.go('/fleet-dashboard');
+                break;
+              case UserRole.fleetManager:
+                context.go('/fleet-tower');
+                break;
+              case UserRole.merchant:
+                context.go('/merchant-dashboard');
+                break;
+            }
+          }
         },
       );
     } catch (e) {
