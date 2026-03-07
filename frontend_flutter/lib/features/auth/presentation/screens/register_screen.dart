@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/enums/user_role.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../core/config/supabase_config.dart';
+import '../../domain/entities/user_profile.dart';
 import '../../providers/providers.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -19,16 +21,24 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _idController = TextEditingController(); // For Fleet: Vehicle ID, Merchant: Station ID
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   
   UserRole _selectedRole = UserRole.rider;
   bool _isLoading = false;
   bool _agreedToTerms = false;
+  bool _passwordVisible = false;
+  bool _confirmPasswordVisible = false;
 
   @override
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
     _idController.dispose();
+    _usernameController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -122,6 +132,32 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               
               // 4. Set user role locally
               ref.read(userRoleNotifierProvider.notifier).setRole(_selectedRole);
+              
+              // 5. Store username and password securely
+              const storage = FlutterSecureStorage();
+              await storage.write(key: 'auth_username', value: _usernameController.text);
+              await storage.write(key: 'auth_password', value: _passwordController.text);
+              
+              // 6. Save user profile locally
+              final publicKey = await ref.read(stellarServiceProvider).getPublicKey();
+              publicKey.fold(
+                (failure) => print('Failed to get public key for profile'),
+                (pubKey) async {
+                  final profile = UserProfile(
+                    publicKey: pubKey,
+                    role: _selectedRole,
+                    name: _nameController.text,
+                    phone: _phoneController.text,
+                    vehicleId: _selectedRole == UserRole.fleetDriver ? _idController.text : null,
+                    fleetName: _selectedRole == UserRole.fleetManager ? _idController.text : null,
+                    stationId: _selectedRole == UserRole.merchant ? _idController.text : null,
+                    stationName: _selectedRole == UserRole.merchant ? _nameController.text : null,
+                    nationalId: _selectedRole == UserRole.rider ? _idController.text : null,
+                  );
+                  
+                  await ref.read(userProfileNotifierProvider.notifier).saveProfile(profile);
+                },
+              );
               
               if (mounted) {
                 final message = supabaseUserId != null
@@ -323,6 +359,103 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your phone number';
+                    }
+                    return null;
+                  },
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Username field
+                TextFormField(
+                  controller: _usernameController,
+                  decoration: InputDecoration(
+                    labelText: 'Username',
+                    prefixIcon: const Icon(Icons.account_circle_outlined),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter a username';
+                    }
+                    if (value.length < 3) {
+                      return 'Username must be at least 3 characters';
+                    }
+                    return null;
+                  },
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Password field
+                TextFormField(
+                  controller: _passwordController,
+                  decoration: InputDecoration(
+                    labelText: 'Password',
+                    prefixIcon: const Icon(Icons.lock_outlined),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _passwordVisible ? Icons.visibility : Icons.visibility_off,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _passwordVisible = !_passwordVisible;
+                        });
+                      },
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                  ),
+                  obscureText: !_passwordVisible,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter a password';
+                    }
+                    if (value.length < 6) {
+                      return 'Password must be at least 6 characters';
+                    }
+                    return null;
+                  },
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Confirm Password field
+                TextFormField(
+                  controller: _confirmPasswordController,
+                  decoration: InputDecoration(
+                    labelText: 'Confirm Password',
+                    prefixIcon: const Icon(Icons.lock_outlined),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _confirmPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _confirmPasswordVisible = !_confirmPasswordVisible;
+                        });
+                      },
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                  ),
+                  obscureText: !_confirmPasswordVisible,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please confirm your password';
+                    }
+                    if (value != _passwordController.text) {
+                      return 'Passwords do not match';
                     }
                     return null;
                   },
