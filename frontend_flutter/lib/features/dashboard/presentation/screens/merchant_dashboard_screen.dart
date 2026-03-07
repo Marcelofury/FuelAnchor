@@ -19,6 +19,7 @@ class _MerchantDashboardScreenState extends ConsumerState<MerchantDashboardScree
   @override
   Widget build(BuildContext context) {
     final publicKeyAsync = ref.watch(userPublicKeyProvider);
+    final userProfileAsync = ref.watch(userProfileNotifierProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
@@ -67,20 +68,54 @@ class _MerchantDashboardScreenState extends ConsumerState<MerchantDashboardScree
                       ),
                       child: Column(
                         children: [
-                          const Text(
-                            'Pump #1',
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.navy,
+                          userProfileAsync.when(
+                            data: (profile) => Text(
+                              'Pump #${profile?.stationId ?? '1'}',
+                              style: const TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.navy,
+                              ),
+                            ),
+                            loading: () => const Text(
+                              'Loading...',
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.navy,
+                              ),
+                            ),
+                            error: (_, __) => const Text(
+                              'Pump #1',
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.navy,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 8),
-                          Text(
-                            'Shell Kampala - Central District',
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 14,
+                          userProfileAsync.when(
+                            data: (profile) => Text(
+                              profile?.stationName ?? 'FuelAnchor Station',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 14,
+                              ),
+                            ),
+                            loading: () => Text(
+                              'Loading...',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 14,
+                              ),
+                            ),
+                            error: (_, __) => Text(
+                              'FuelAnchor Station',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 14,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 24),
