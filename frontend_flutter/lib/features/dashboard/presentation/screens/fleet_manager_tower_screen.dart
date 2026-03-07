@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../auth/providers/providers.dart';
 
 class FleetManagerTowerScreen extends ConsumerStatefulWidget {
   const FleetManagerTowerScreen({super.key});
@@ -14,6 +17,8 @@ class _FleetManagerTowerScreenState extends ConsumerState<FleetManagerTowerScree
 
   @override
   Widget build(BuildContext context) {
+    final userProfileAsync = ref.watch(userProfileNotifierProvider);
+    
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       body: SafeArea(
@@ -34,28 +39,48 @@ class _FleetManagerTowerScreenState extends ConsumerState<FleetManagerTowerScree
                     child: const Icon(Icons.anchor, color: AppColors.electricGreen, size: 28),
                   ),
                   const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Control Tower',
-                        style: TextStyle(
-                          color: AppColors.navy,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 20,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        userProfileAsync.when(
+                          data: (profile) => Text(
+                            profile?.fleetName ?? 'Control Tower',
+                            style: const TextStyle(
+                              color: AppColors.navy,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 20,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          loading: () => const Text(
+                            'Loading...',
+                            style: TextStyle(
+                              color: AppColors.navy,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 20,
+                            ),
+                          ),
+                          error: (_, __) => const Text(
+                            'Control Tower',
+                            style: TextStyle(
+                              color: AppColors.navy,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 20,
+                            ),
+                          ),
                         ),
-                      ),
-                      Text(
-                        'FUELANCHOR',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 11,
-                          letterSpacing: 0.8,
+                        Text(
+                          'FUELANCHOR',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 11,
+                            letterSpacing: 0.8,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                  const Spacer(),
                   Stack(
                     children: [
                       IconButton(
@@ -76,10 +101,29 @@ class _FleetManagerTowerScreenState extends ConsumerState<FleetManagerTowerScree
                       ),
                     ],
                   ),
-                  CircleAvatar(
-                    radius: 22,
-                    backgroundColor: Colors.grey[300],
-                    child: Icon(Icons.person, color: Colors.grey[700], size: 26),
+                  userProfileAsync.when(
+                    data: (profile) => CircleAvatar(
+                      radius: 22,
+                      backgroundColor: AppColors.navy,
+                      child: Text(
+                        profile?.name?.substring(0, 1).toUpperCase() ?? 'M',
+                        style: const TextStyle(
+                          color: AppColors.electricGreen,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    loading: () => CircleAvatar(
+                      radius: 22,
+                      backgroundColor: Colors.grey[300],
+                      child: Icon(Icons.person, color: Colors.grey[700], size: 26),
+                    ),
+                    error: (_, __) => CircleAvatar(
+                      radius: 22,
+                      backgroundColor: Colors.grey[300],
+                      child: Icon(Icons.person, color: Colors.grey[700], size: 26),
+                    ),
                   ),
                 ],
               ),
@@ -101,25 +145,29 @@ class _FleetManagerTowerScreenState extends ConsumerState<FleetManagerTowerScree
                               color: AppColors.navy,
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Column(
+                            child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
                                   children: [
                                     Text(
-                                      'FUEL SAVED',
-                                      style: TextStyle(
+                                      userProfileAsync.when(
+                                        data: (profile) => '${profile?.fleetName ?? 'FLEET'} FUEL SAVED',
+                                        loading: () => 'FUEL SAVED',
+                                        error: (_, __) => 'FUEL SAVED',
+                                      ).toUpperCase(),
+                                      style: const TextStyle(
                                         color: Colors.white,
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
-                                    SizedBox(width: 8),
-                                    Icon(Icons.verified, color: AppColors.electricGreen, size: 16),
+                                    const SizedBox(width: 8),
+                                    const Icon(Icons.verified, color: AppColors.electricGreen, size: 16),
                                   ],
                                 ),
-                                SizedBox(height: 12),
-                                Text(
+                                const SizedBox(height: 12),
+                                const Text(
                                   '1,240L',
                                   style: TextStyle(
                                     color: Colors.white,
@@ -127,8 +175,8 @@ class _FleetManagerTowerScreenState extends ConsumerState<FleetManagerTowerScree
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                                SizedBox(height: 6),
-                                Row(
+                                const SizedBox(height: 6),
+                                const Row(
                                   children: [
                                     Icon(Icons.trending_up, color: AppColors.electricGreen, size: 16),
                                     SizedBox(width: 4),
@@ -215,7 +263,7 @@ class _FleetManagerTowerScreenState extends ConsumerState<FleetManagerTowerScree
                       ],
                     ),
                     const SizedBox(height: 20),
-                    // Map View
+                    // Map View with OpenStreetMap
                     Container(
                       height: 300,
                       decoration: BoxDecoration(
@@ -226,12 +274,72 @@ class _FleetManagerTowerScreenState extends ConsumerState<FleetManagerTowerScree
                         borderRadius: BorderRadius.circular(16),
                         child: Stack(
                           children: [
-                            // Placeholder map
-                            Container(
-                              color: Colors.grey[300],
-                              child: Center(
-                                child: Icon(Icons.map, size: 80, color: Colors.grey[500]),
+                            // OpenStreetMap
+                            FlutterMap(
+                              options: MapOptions(
+                                initialCenter: const LatLng(-1.286389, 36.817223), // Nairobi, Kenya
+                                initialZoom: 13.0,
+                                minZoom: 5.0,
+                                maxZoom: 18.0,
                               ),
+                              children: [
+                                TileLayer(
+                                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                  userAgentPackageName: 'com.fuelanchor.app',
+                                  maxZoom: 19,
+                                ),
+                                MarkerLayer(
+                                  markers: [
+                                    // Example vehicle markers
+                                    Marker(
+                                      point: const LatLng(-1.286389, 36.817223),
+                                      width: 40,
+                                      height: 40,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: AppColors.electricGreen,
+                                          shape: BoxShape.circle,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: AppColors.electricGreen.withOpacity(0.4),
+                                              blurRadius: 8,
+                                              spreadRadius: 2,
+                                            ),
+                                          ],
+                                        ),
+                                        child: const Icon(
+                                          Icons.local_shipping,
+                                          color: AppColors.navy,
+                                          size: 20,
+                                        ),
+                                      ),
+                                    ),
+                                    Marker(
+                                      point: const LatLng(-1.290270, 36.821946),
+                                      width: 40,
+                                      height: 40,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: AppColors.electricGreen,
+                                          shape: BoxShape.circle,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: AppColors.electricGreen.withOpacity(0.4),
+                                              blurRadius: 8,
+                                              spreadRadius: 2,
+                                            ),
+                                          ],
+                                        ),
+                                        child: const Icon(
+                                          Icons.local_shipping,
+                                          color: AppColors.navy,
+                                          size: 20,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                             // Live Tracking Badge
                             Positioned(
@@ -259,68 +367,6 @@ class _FleetManagerTowerScreenState extends ConsumerState<FleetManagerTowerScree
                                 ),
                               ),
                             ),
-                            // Vehicle marker example
-                            Positioned(
-                              top: 120,
-                              left: 140,
-                              child: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: AppColors.electricGreen,
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: AppColors.electricGreen.withOpacity(0.4),
-                                      blurRadius: 12,
-                                      spreadRadius: 4,
-                                    ),
-                                  ],
-                                ),
-                                child: const Icon(Icons.local_shipping, color: AppColors.navy, size: 20),
-                              ),
-                            ),
-                            // Vehicle label
-                            Positioned(
-                              top: 100,
-                              left: 100,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: const Text(
-                                  'KCA 123X',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.navy,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            // Map Controls
-                            Positioned(
-                              bottom: 16,
-                              right: 16,
-                              child: Column(
-                                children: [
-                                  FloatingActionButton(
-                                    mini: true,
-                                    backgroundColor: AppColors.electricGreen,
-                                    onPressed: () {},
-                                    child: const Icon(Icons.add, color: AppColors.navy),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  FloatingActionButton(
-                                    mini: true,
-                                    backgroundColor: Colors.white,
-                                    onPressed: () {},
-                                    child: const Icon(Icons.remove, color: AppColors.navy),
-                                  ),
-                                ],
-                              ),
-                            ),
                           ],
                         ),
                       ),
@@ -330,13 +376,25 @@ class _FleetManagerTowerScreenState extends ConsumerState<FleetManagerTowerScree
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Fleet Status',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.navy,
-                          ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Fleet Status',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.navy,
+                              ),
+                            ),
+                            Text(
+                              'Demo vehicles - Connect fleet for live data',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
                         ),
                         TextButton(
                           onPressed: () {},
@@ -392,7 +450,19 @@ class _FleetManagerTowerScreenState extends ConsumerState<FleetManagerTowerScree
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedNavIndex,
-        onTap: (index) => setState(() => _selectedNavIndex = index),
+        onTap: (index) {
+          setState(() => _selectedNavIndex = index);
+          // Navigation handling
+          if (index == 1) {
+            // Map view - show snackbar for now
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Full map view coming soon'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+          }
+        },
         type: BottomNavigationBarType.fixed,
         selectedItemColor: AppColors.electricGreen,
         unselectedItemColor: Colors.grey[600],
