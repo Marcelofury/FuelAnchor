@@ -85,44 +85,24 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             AppLogger.warning('Testnet funding error: $e. Continuing with registration.');
           }
           
-          // 4. Create Supabase account (REQUIRED)
+// 4. Create user account in Supabase database (REQUIRED)
           String supabaseUserId;
           
           try {
-            // Use username as email (username@fuelanchor.app)
-            final email = SupabaseService.usernameToEmail(_usernameController.text);
-            final password = _passwordController.text;
-              
-            final authResponse = await SupabaseService.signUp(
-              email: email,
-              password: password,
-              metadata: {
-                'full_name': _nameController.text,
-                'phone': _phoneController.text,
-                'role': _selectedRole.name,
-                'username': _usernameController.text,
-              },
-            );
-
-            if (authResponse.user == null) {
-              throw Exception('Failed to create Supabase user account');
-            }
-
-            supabaseUserId = authResponse.user!.id;
-            
-            // Store Supabase user ID in secure storage
-            const storage = FlutterSecureStorage();
-            await storage.write(key: 'supabase_user_id', value: supabaseUserId);
-            await storage.write(key: 'auth_username', value: _usernameController.text);
-            
-            // Create profile in Supabase
-            await SupabaseService.createProfile(
-              userId: supabaseUserId,
+            // Create user directly in database with username/password
+            supabaseUserId = await SupabaseService.createUser(
+              username: _usernameController.text,
+              password: _passwordController.text,
               fullName: _nameController.text,
               phoneNumber: _phoneController.text,
               role: _selectedRole.name,
               stellarPublicKey: keypair.accountId,
             );
+            
+            // Store user info in secure storage
+            const storage = FlutterSecureStorage();
+            await storage.write(key: 'supabase_user_id', value: supabaseUserId);
+            await storage.write(key: 'auth_username', value: _usernameController.text);
 
             // Create role-specific profile
             final Map<String, dynamic> roleData = {};
