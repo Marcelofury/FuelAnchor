@@ -69,7 +69,7 @@ class BiometricAuthNotifier extends _$BiometricAuthNotifier {
     
     result.fold(
       (failure) {
-        state = AsyncValue.error(failure.message, StackTrace.current);
+        state = AsyncValue.error(failure.message ?? 'Failed to enable biometric', StackTrace.current);
       },
       (_) {
         state = const AsyncValue.data(true);
@@ -88,7 +88,7 @@ class BiometricAuthNotifier extends _$BiometricAuthNotifier {
     
     result.fold(
       (failure) {
-        state = AsyncValue.error(failure.message, StackTrace.current);
+        state = AsyncValue.error(failure.message ?? 'Failed to disable biometric', StackTrace.current);
       },
       (_) {
         state = const AsyncValue.data(false);
@@ -108,7 +108,7 @@ class BiometricAuthNotifier extends _$BiometricAuthNotifier {
     
     return result.fold(
       (failure) {
-        state = AsyncValue.error(failure.message, StackTrace.current);
+        state = AsyncValue.error(failure.message ?? 'Authentication failed', StackTrace.current);
         return false;
       },
       (success) => success,
@@ -135,7 +135,7 @@ class BiometricAuthNotifier extends _$BiometricAuthNotifier {
     
     return result.fold(
       (failure) {
-        state = AsyncValue.error(failure.message, StackTrace.current);
+        state = AsyncValue.error(failure.message ?? 'Transaction authentication failed', StackTrace.current);
         return false;
       },
       (success) => success,
