@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/enums/user_role.dart';
-import '../../../../core/services/supabase_service.dart';
-import '../../../../core/config/supabase_config.dart';
 import '../../providers/providers.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -15,7 +14,19 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  bool _isLoading = false;  bool _isBiometricLogin = false;
+  final _formKey = GlobalKey<FormState>();
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _isLoading = false;
+  bool _isBiometricLogin = false;
+  bool _passwordVisible = false;
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -29,18 +40,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     
     await keypairResult.fold(
       (failure) {
-        // No existing keypair - check Supabase if configured
-        if (SupabaseConfig.isConfigured && SupabaseService.isAuthenticated) {
-          final role = ref.read(userRoleNotifierProvider);
-          if (mounted && role != null) {
-            _navigateToDashboard(role);
-          }
-        }
+        // No existing keypair - stay on login screen
       },
       (keypair) async {
-        // Has existing keypair, check for role
+        // Has existing keypair, check for role and profile
         final role = ref.read(userRoleNotifierProvider);
         if (mounted && role != null) {
+          // Load profile and navigate
+          await ref.read(userProfileNotifierProvider.notifier).refresh();
           _navigateToDashboard(role);
         }
       },
@@ -64,63 +71,48 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
-  Future<void> _handleBiometricLogin() async {
-    setState(() => _isBiometricLogin = true);
-    
-    try {
-      final stellarService = ref.read(stellarServiceProvider);
-      final keypairResult = await stellarService.getStoredKeypair();
-      
-      await keypairResult.fold(
-        (failure) {
-          throw Exception('No account found. Please register first.');
-        },
-        (keypair) async {
-          final role = ref.read(userRoleNotifierProvider);
-          if (mounted) {
-            if (role != null) {
-              _navigateToDashboard(role);
-            } else {
-              throw Exception('User role not found. Please register.');
-            }
-          }
-        },
-      );
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Login failed: $e')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isBiometricLogin = false);
-      }
-    }
-  }
-  Future<void> _handleLogin(UserRole role) async {
+  Future<void> _handleLogin() async {
+    if (!_formKey.currentState!.validate()) return;
+
     setState(() => _isLoading = true);
 
     try {
-      final stellarService = ref.read(stellarServiceProvider);
+      const storage = FlutterSecureStorage();
       
-      // Check if keypair exists
-      final keypairResult = await stellarService.getStoredKeypair();
+      // Get stored credentials
+      final storedUsername = await storage.read(key: 'auth_username');
+      final storedPassword = await storage.read(key: 'auth_password');
       
-      await keypairResult.fold(
-        (failure) async {
-          // No keypair - need to register
-          throw Exception('No account found. Please register first.');
-        },
-        (keyPair) async {
-          // Has keypair - set role and login
-          ref.read(userRoleNotifierProvider.notifier).setRole(role);
-          
-          if (mounted) {
-            _navigateToDashboard(role);
-          }
-        },
+      // Validate credentials
+      if (storedUsername == null || storedPassword == null) {
+        throw Exception('No account found. Please register first.');
+      }
+      
+      if (_usernameController.text != storedUsername || 
+          _passwordController.text != storedPassword) {
+        throw Exception('Invalid username or password');
+      }
+      
+      // Load profile to get role
+      await ref.read(userProfileNotifierProvider.notifier).refresh();
+      final profileAsync = ref.read(userProfileNotifierProvider);
+      
+      final profile = profileAsync.when(
+        data: (data) => data,
+        loading: () => null,
+        error: (e, st) => null,
       );
+      
+      if (profile == null) {
+        throw Exception('User profile not found. Please register again.');
+      }
+      
+      // Set role
+      ref.read(userRoleNotifierProvider.notifier).setRole(profile.role);
+      
+      if (mounted) {
+        _navigateToDashboard(profile.role);
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -145,291 +137,312 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         child: SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            child: Column(
-              children: [
-                const SizedBox(height: 20),
-                // Back button
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: IconButton(
-                    icon: const Icon(Icons.arrow_back, color: AppColors.navy),
-                    onPressed: () => context.go('/'),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  const SizedBox(height: 20),
+                  // Back button
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back, color: AppColors.navy),
+                      onPressed: () => context.go('/'),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                // Logo
-                Container(
-                  width: 90,
-                  height: 90,
-                  decoration: BoxDecoration(
-                    color: AppColors.electricGreen,
-                    borderRadius: BorderRadius.circular(30),
+                  const SizedBox(height: 20),
+                  // Logo
+                  Container(
+                    width: 90,
+                    height: 90,
+                    decoration: BoxDecoration(
+                      color: AppColors.electricGreen,
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    child: const Icon(
+                      Icons.anchor,
+                      size: 50,
+                      color: AppColors.navy,
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.anchor,
-                    size: 50,
-                    color: AppColors.navy,
+                  const SizedBox(height: 20),
+                  // App Name
+                  RichText(
+                    text: const TextSpan(
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.navy,
+                      ),
+                      children: [
+                        TextSpan(text: 'Fuel '),
+                        TextSpan(
+                          text: 'Anchor',
+                          style: TextStyle(color: AppColors.electricGreen),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                // App Name
-                RichText(
-                  text: const TextSpan(
+                  const SizedBox(height: 40),
+                  // Welcome Text
+                  const Text(
+                    'Welcome back',
                     style: TextStyle(
-                      fontSize: 32,
+                      fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: AppColors.navy,
                     ),
-                    children: [
-                      TextSpan(text: 'Fuel '),
-                      TextSpan(
-                        text: 'Anchor',
-                        style: TextStyle(color: AppColors.electricGreen),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Enter your credentials to continue',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                  
+                  // Username field
+                  TextFormField(
+                    controller: _usernameController,
+                    decoration: InputDecoration(
+                      labelText: 'Username',
+                      prefixIcon: const Icon(Icons.account_circle_outlined),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    ],
+                      filled: true,
+                      fillColor: Colors.white,
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter your username';
+                      }
+                      return null;
+                    },
                   ),
-                ),
-                const SizedBox(height: 40),
-                // Welcome Text
-                const Text(
-                  'Welcome back',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.navy,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Select your access portal to continue',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
-                ),
-                const SizedBox(height: 30),
-                // Rider Access Card
-                _AccessCard(
-                  title: 'Rider Access',
-                  subtitle: 'Scan and pay for fuel',
-                  icon: Icons.motorcycle,
-                  onTap: _isLoading ? null : () => _handleLogin(UserRole.rider),
-                ),
-                const SizedBox(height: 16),
-                // Driver Access Card
-                _AccessCard(
-                  title: 'Driver Access',
-                  subtitle: 'Fuel up and manage trips',
-                  icon: Icons.local_shipping,
-                  onTap: _isLoading ? null : () => _handleLogin(UserRole.fleetDriver),
-                ),
-                const SizedBox(height: 16),
-                // Fleet Manager Access Card
-                _AccessCard(
-                  title: 'Fleet Manager',
-                  subtitle: 'Oversee fleet, allocate budgets & track vehicles',
-                  icon: Icons.dashboard_customize,
-                  onTap: _isLoading ? null : () => _handleLogin(UserRole.fleetManager),
-                ),
-                const SizedBox(height: 16),
-                // Merchant Access Card
-                _AccessCard(
-                  title: 'Merchant Access',
-                  subtitle: 'Manage sales and inventory',
-                  icon: Icons.store,
-                  onTap: _isLoading ? null : () => _handleLogin(UserRole.merchant),
-                ),
-                const SizedBox(height: 30),
-                // Biometric Login
-                GestureDetector(
-                  onTap: _isBiometricLogin ? null : _handleBiometricLogin,
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 70,
-                        height: 70,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white,
-                          border: Border.all(color: Colors.grey[300]!, width: 2),
+                  
+                  const SizedBox(height: 16),
+                  
+                  // Password field
+                  TextFormField(
+                    controller: _passwordController,
+                    decoration: InputDecoration(
+                      labelText: 'Password',
+                      prefixIcon: const Icon(Icons.lock_outlined),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _passwordVisible ? Icons.visibility : Icons.visibility_off,
                         ),
-                        child: _isBiometricLogin
-                            ? const Center(
-                                child: SizedBox(
-                                  width: 30,
-                                  height: 30,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation(AppColors.electricGreen),
-                                  ),
-                                ),
-                              )
-                            : Icon(
-                                Icons.fingerprint,
-                                size: 40,
-                                color: Colors.grey[800],
+                        onPressed: () {
+                          setState(() {
+                            _passwordVisible = !_passwordVisible;
+                          });
+                        },
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                    ),
+                    obscureText: !_passwordVisible,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter your password';
+                      }
+                      return null;
+                    },
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Login button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _handleLogin,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.electricGreen,
+                        foregroundColor: AppColors.navy,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation(AppColors.navy),
                               ),
+                            )
+                          : const Text(
+                              'LOGIN',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Divider with "OR"
+                  Row(
+                    children: [
+                      Expanded(child: Divider(color: Colors.grey[400])),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          'OR',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
-                      const SizedBox(height: 10),
-                      const Text(
-                        'BIOMETRIC LOGIN',
+                      Expanded(child: Divider(color: Colors.grey[400])),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Biometric Login (kept as quick login option)
+                  GestureDetector(
+                    onTap: _isBiometricLogin ? null : () {
+                      // Quick login using stored credentials and biometric
+                      setState(() => _isBiometricLogin = true);
+                      _checkExistingAccount().then((_) {
+                        if (mounted) setState(() => _isBiometricLogin = false);
+                      });
+                    },
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 70,
+                          height: 70,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white,
+                            border: Border.all(color: Colors.grey[300]!, width: 2),
+                          ),
+                          child: _isBiometricLogin
+                              ? const Center(
+                                  child: SizedBox(
+                                    width: 30,
+                                    height: 30,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation(AppColors.electricGreen),
+                                    ),
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.fingerprint,
+                                  size: 40,
+                                  color: Colors.grey[800],
+                                ),
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'QUICK LOGIN',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.navy,
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Verified Badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.verified, size: 18, color: AppColors.navy),
+                        SizedBox(width: 8),
+                        Text(
+                          'VERIFIED BY STELLAR',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.navy,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // Register link
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Don\'t have an account? ',
                         style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.navy,
-                          letterSpacing: 1.0,
+                          fontSize: 14,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => context.go('/register'),
+                        child: const Text(
+                          'Register',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.electricGreen,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 24),
-                // Verified Badge
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(25),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
+                  const SizedBox(height: 12),
+                  // Footer Links
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.verified, size: 18, color: AppColors.navy),
-                      SizedBox(width: 8),
                       Text(
-                        'VERIFIED BY STELLAR',
+                        'HELP CENTER',
                         style: TextStyle(
                           fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.navy,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(width: 30),
+                      Text(
+                        'ENGLISH (US)',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w600,
                           letterSpacing: 0.5,
                         ),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 20),
-                // Register link
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Don\'t have an account? ',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[700],
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => context.go('/register'),
-                      child: const Text(
-                        'Register',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.electricGreen,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                // Footer Links
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'HELP CENTER',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    const SizedBox(width: 30),
-                    Text(
-                      'ENGLISH (US)',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _AccessCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  const _AccessCard({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: AppColors.electricGreen,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 40,
-              color: AppColors.navy,
-            ),
-            const SizedBox(width: 20),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.navy,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.navy.withOpacity(0.8),
-                    ),
-                  ),
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
-            const Icon(
-              Icons.arrow_forward_ios,
-              size: 24,
-              color: AppColors.navy,
-            ),
-          ],
+          ),
         ),
       ),
     );
