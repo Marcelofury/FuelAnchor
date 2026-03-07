@@ -5,7 +5,6 @@ import 'package:fuelanchor/core/error/failure.dart';
 /// Geofencing service for validating transactions within allowed radius
 class GeofencingService {
   static const double _maxDistanceMeters = 100.0; // 100 meters radius
-  static const double _earthRadiusMeters = 6371000.0; // Earth radius in meters
 
   /// Check if location services are enabled
   Future<bool> isLocationServiceEnabled() async {
@@ -18,9 +17,8 @@ class GeofencingService {
       // Check if location services are enabled
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        return Left(Failure(
-          message: 'Location services are disabled. Please enable them to continue.',
-          code: 'LOCATION_SERVICES_DISABLED',
+        return Left(Failure.validationError(
+          'Location services are disabled. Please enable them to continue.',
         ));
       }
 
@@ -30,25 +28,22 @@ class GeofencingService {
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          return Left(Failure(
-            message: 'Location permission denied. Please grant permission to proceed.',
-            code: 'LOCATION_PERMISSION_DENIED',
+          return Left(Failure.unauthorized(
+            'Location permission denied. Please grant permission to proceed.',
           ));
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
-        return Left(Failure(
-          message: 'Location permissions are permanently denied. Please enable them in app settings.',
-          code: 'LOCATION_PERMISSION_DENIED_FOREVER',
+        return Left(Failure.unauthorized(
+          'Location permissions are permanently denied. Please enable them in app settings.',
         ));
       }
 
       return const Right(true);
     } catch (e) {
-      return Left(Failure(
-        message: 'Failed to check location permissions: ${e.toString()}',
-        code: 'PERMISSION_CHECK_ERROR',
+      return Left(Failure.unknown(
+        'Failed to check location permissions: ${e.toString()}',
       ));
     }
   }
@@ -68,17 +63,15 @@ class GeofencingService {
             );
             return Right(position);
           } catch (e) {
-            return Left(Failure(
-              message: 'Failed to get current location: ${e.toString()}',
-              code: 'LOCATION_FETCH_ERROR',
+            return Left(Failure.unknown(
+              'Failed to get current location: ${e.toString()}',
             ));
           }
         },
       );
     } catch (e) {
-      return Left(Failure(
-        message: 'Unexpected error getting location: ${e.toString()}',
-        code: 'LOCATION_UNEXPECTED_ERROR',
+      return Left(Failure.unknown(
+        'Unexpected error getting location: ${e.toString()}',
       ));
     }
   }
@@ -120,9 +113,8 @@ class GeofencingService {
 
           // Validate distance
           if (distance > allowedDistance) {
-            return Left(Failure(
-              message: 'You are too far from the station. Distance: ${distance.toStringAsFixed(0)}m (max: ${allowedDistance.toStringAsFixed(0)}m)',
-              code: 'OUT_OF_RANGE',
+            return Left(Failure.validationError(
+              'You are too far from the station. Distance: ${distance.toStringAsFixed(0)}m (max: ${allowedDistance.toStringAsFixed(0)}m)',
             ));
           }
 
@@ -130,14 +122,11 @@ class GeofencingService {
         },
       );
     } catch (e) {
-      return Left(Failure(
-        message: 'Failed to validate proximity: ${e.toString()}',
-        code: 'PROXIMITY_VALIDATION_ERROR',
+      return Left(Failure.unknown(
+        'Failed to validate proximity: ${e.toString()}',
       ));
     }
   }
-
-  /// Validate transaction with geofencing
   /// Returns coordinates and distance if valid
   Future<Either<Failure, Map<String, dynamic>>> validateTransactionLocation({
     required double stationLat,
@@ -171,9 +160,8 @@ class GeofencingService {
         },
       );
     } catch (e) {
-      return Left(Failure(
-        message: 'Transaction location validation failed: ${e.toString()}',
-        code: 'TRANSACTION_LOCATION_ERROR',
+      return Left(Failure.unknown(
+        'Transaction location validation failed: ${e.toString()}',
       ));
     }
   }
