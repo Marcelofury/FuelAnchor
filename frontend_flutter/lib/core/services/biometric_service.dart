@@ -20,7 +20,7 @@ class BiometricService {
       
       return Right(canCheckBiometrics && isDeviceSupported);
     } catch (e) {
-      return Left(Failure('Failed to check biometric availability: ${e.toString()}'));
+      return Left(Failure.unknown('Failed to check biometric availability: ${e.toString()}'));
     }
   }
 
@@ -32,7 +32,7 @@ class BiometricService {
       
       return Right(availableBiometrics);
     } catch (e) {
-      return Left(Failure('Failed to get available biometrics: ${e.toString()}'));
+      return Left(Failure.unknown('Failed to get available biometrics: ${e.toString()}'));
     }
   }
 
@@ -52,7 +52,7 @@ class BiometricService {
       );
 
       if (!isAvailable) {
-        return Left(Failure('Biometric authentication not available on this device'));
+        return Left(Failure.unknown('Biometric authentication not available on this device'));
       }
 
       // Attempt authentication
@@ -68,7 +68,7 @@ class BiometricService {
 
       return Right(didAuthenticate);
     } catch (e) {
-      return Left(Failure('Biometric authentication failed: ${e.toString()}'));
+      return Left(Failure.unknown('Biometric authentication failed: ${e.toString()}'));
     }
   }
 
@@ -106,12 +106,12 @@ class BiometricService {
 
             return const Right(null);
           } else {
-            return Left(Failure('Biometric verification failed'));
+            return Left(Failure.unauthorized('Biometric verification failed'));
           }
         },
       );
     } catch (e) {
-      return Left(Failure('Failed to enable biometric: ${e.toString()}'));
+      return Left(Failure.unknown('Failed to enable biometric: ${e.toString()}'));
     }
   }
 
@@ -122,7 +122,7 @@ class BiometricService {
       await _secureStorage.delete(key: _biometricTypeKey);
       return const Right(null);
     } catch (e) {
-      return Left(Failure('Failed to disable biometric: ${e.toString()}'));
+      return Left(Failure.unknown('Failed to disable biometric: ${e.toString()}'));
     }
   }
 
@@ -132,7 +132,7 @@ class BiometricService {
       final String? enabled = await _secureStorage.read(key: _biometricEnabledKey);
       return Right(enabled == 'true');
     } catch (e) {
-      return Left(Failure('Failed to check biometric status: ${e.toString()}'));
+      return Left(Failure.unknown('Failed to check biometric status: ${e.toString()}'));
     }
   }
 
@@ -164,7 +164,7 @@ class BiometricService {
         },
       );
     } catch (e) {
-      return Left(Failure('Failed to get biometric type: ${e.toString()}'));
+      return Left(Failure.unknown('Failed to get biometric type: ${e.toString()}'));
     }
   }
 
@@ -219,7 +219,7 @@ class BiometricService {
       await _localAuth.stopAuthentication();
       return const Right(null);
     } catch (e) {
-      return Left(Failure('Failed to stop authentication: ${e.toString()}'));
+      return Left(Failure.unknown('Failed to stop authentication: ${e.toString()}'));
     }
   }
 }
