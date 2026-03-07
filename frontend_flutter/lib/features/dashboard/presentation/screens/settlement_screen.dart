@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../../../../core/constants/app_colors.dart';
@@ -34,7 +35,10 @@ class _SettlementScreenState extends ConsumerState<SettlementScreen> {
 
     if (SupabaseConfig.isConfigured) {
       try {
-        final userId = SupabaseService.currentUser?.id;
+        // Get user ID from secure storage
+        const storage = FlutterSecureStorage();
+        final userId = await storage.read(key: 'supabase_user_id');
+        
         if (userId == null) {
           _loadDummyData();
           setState(() => _isLoading = false);

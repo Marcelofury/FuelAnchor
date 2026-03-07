@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/services/supabase_service.dart';
 import '../../../../core/config/supabase_config.dart';
@@ -36,7 +37,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
     if (SupabaseConfig.isConfigured) {
       try {
-        final userId = SupabaseService.currentUser?.id;
+        // Get user ID from secure storage
+        const storage = FlutterSecureStorage();
+        final userId = await storage.read(key: 'supabase_user_id');
+        
         if (userId == null) {
           setState(() => _isLoading = false);
           return;
