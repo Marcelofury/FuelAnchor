@@ -29,62 +29,120 @@ class SupabaseService {
     return _client!;
   }
 
-  /// Check if user is authenticated
-  static bool get isAuthenticated {
-    if (!SupabaseConfig.isConfigured) return false;
-    return _client?.auth.currentUser != null;
+  /// Check if a username exists in database
+  static Future<bool> usernameExists(String username) async {
+    final response = await client
+        .from('profiles')
+        .select('id')
+        .eq('username', username)
+        .maybeSingle();
+    
+    return response != null;
   }
 
-  /// Get current user
-  static User? get currentUser {
-    if (!SupabaseConfig.isConfigured) return null;
-    return _client?.auth.currentUser;
+  /// Check if a phone number exists in database
+  static Future<bool> phoneExists(String phoneNumber) async {
+    final response = await client
+        .from('profiles')
+        .select('id')
+        .eq('phone_number', phoneNumber)
+        .maybeSingle();
+    
+    return response != null;
   }
 
-  /// Sign up new user
-  static Future<AuthResponse> signUp({
-    required String email,
+  /// Simple hash function for password (basic security)
+  static String hashPassword(String password) {
+    // For production, use a proper bcrypt/argon2 implementation
+    // This is a simple hash for demonstration
+    return password.hashCode.toString();
+  }
+
+  /// Create user with username/password in database
+  static Future<String> createUser({
+    required String username,
     required String password,
-    Map<String, dynamic>? metadata,
-  }) async {
-    return await client.auth.signUp(
-      email: email,
-      password: password,
-      data: metadata,
-    );
-  }
-
-  /// Sign in user
-  static Future<AuthResponse> signIn({
-    required String email,
-    required String password,
-  }) async {
-    return await client.auth.signInWithPassword(
-      email: email,
-      password: password,
-    );
-  }
-
-  /// Sign out
-  static Future<void> signOut() async {
-    await client.auth.signOut();
-  }
-
-  /// Create user profile
-  static Future<void> createProfile({
-    required String userId,
     required String fullName,
     required String phoneNumber,
     required String role,
     required String stellarPublicKey,
   }) async {
-    await client.from('profiles').insert({
-      'id': userId,
-      'full_name': fullName,
-      'phone_number': phoneNumber,
-      'role': role,
-      'stellar_public_key': stellarPublicKey,
-    });
+    // Check if username already exists
+    final existing = await client
+        .from('profiles')
+        .select('id')
+        .eq('username', username)
+        .maybeSingle();
+    
+    if (existing != null) {
+      throw Exception('Username already exists');
+    }
+
+    // Check if phone already exists
+    final existingPhone = await client
+        .from('profiles')
+        .select('id')
+        .eq('phone_number', phoneNumber)
+        .maybeSingle();
+    
+    if (existingPhone != null) {
+      throw Exception('Phone number already registered');
+    }
+
+    // Hash password
+    final hashedPassword = hashPassword(password);
+
+    // Insert user into profiles table
+    final response = await client
+        .from('profiles')
+        .insert({
+          'username': username,
+          'password_hash': hashedPassword,
+          'full_name': fullName,
+          'phone_number': phoneNumber,
+          'role': role,
+          'stellar_public_key': stellarPublicKey,
+        })
+        .select()
+        .single();
+
+    return response['id'] as String;
+  }
+
+  /// Authenticate user with username/password
+  static Future<Map<String, dynamic>?> authenticateUser({
+    required String username,
+    required String password,
+  }) async {
+    final hashedPassword = hashPassword(password);
+
+    final response = await client
+        .from('profiles')
+        .select()
+        .eq('username', username)
+        .eq('password_hash', hashedPassword)
+        .maybeSingle();
+
+    return response;
+  }
+
+  /// Sign out (just clear local storage)
+  static Future<void> signOut() async {
+    // No Supabase auth session to clear
+    // Local storage clearing handled by app
+  }
+
+  /// Update user profile
+  static Future<void> updateProfile({
+    required String userId,
+    Map<String, dynamic>? updates,
+  }) async {
+    if (updates == null || updates.isEmpty) return;
+    
+    await client
+        .from('profiles')
+        .update(updates)
+        .eq('id', userId);
   }
 
   /// Create role-specific profile
