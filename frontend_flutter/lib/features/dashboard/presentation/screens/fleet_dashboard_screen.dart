@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:math' as math;
 import '../../../../core/constants/app_colors.dart';
+import '../../../auth/providers/providers.dart';
 
 class FleetDashboardScreen extends ConsumerStatefulWidget {
   const FleetDashboardScreen({super.key});
@@ -105,6 +106,8 @@ class _FleetDashboardScreenState extends ConsumerState<FleetDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final userProfileAsync = ref.watch(userProfileNotifierProvider);
+    
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       body: SafeArea(
@@ -148,30 +151,89 @@ class _FleetDashboardScreenState extends ConsumerState<FleetDashboardScreen> {
                     ],
                   ),
                   const Spacer(),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      const Text(
-                        'John Doe',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
+                  userProfileAsync.when(
+                    data: (profile) => Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          profile?.name ?? 'Driver',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
                         ),
-                      ),
-                      Text(
-                        'ID: 882190',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 12,
+                        Text(
+                          'ID: ${profile?.vehicleId ?? 'N/A'}',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
+                    loading: () => Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        const Text(
+                          'Loading...',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        Text(
+                          'ID: ...',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                    error: (_, __) => Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        const Text(
+                          'Driver',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        Text(
+                          'ID: N/A',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(width: 12),
-                  CircleAvatar(
-                    radius: 24,
-                    backgroundColor: Colors.grey[300],
-                    child: Icon(Icons.person, color: Colors.grey[700], size: 28),
+                  userProfileAsync.when(
+                    data: (profile) => CircleAvatar(
+                      radius: 24,
+                      backgroundColor: Colors.grey[300],
+                      child: Text(
+                        profile?.name.substring(0, 1).toUpperCase() ?? 'D',
+                        style: TextStyle(
+                          color: Colors.grey[700],
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                        ),
+                      ),
+                    ),
+                    loading: () => CircleAvatar(
+                      radius: 24,
+                      backgroundColor: Colors.grey[300],
+                      child: Icon(Icons.person, color: Colors.grey[700], size: 28),
+                    ),
+                    error: (_, __) => CircleAvatar(
+                      radius: 24,
+                      backgroundColor: Colors.grey[300],
+                      child: Icon(Icons.person, color: Colors.grey[700], size: 28),
+                    ),
                   ),
                 ],
               ),
@@ -246,12 +308,30 @@ class _FleetDashboardScreenState extends ConsumerState<FleetDashboardScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 4),
-                                const Text(
-                                  'UBA 123X',
-                                  style: TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.navy,
+                                userProfileAsync.when(
+                                  data: (profile) => Text(
+                                    profile?.vehicleId ?? 'N/A',
+                                    style: const TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.navy,
+                                    ),
+                                  ),
+                                  loading: () => const Text(
+                                    'Loading...',
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.navy,
+                                    ),
+                                  ),
+                                  error: (_, __) => const Text(
+                                    'N/A',
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.navy,
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(height: 4),
