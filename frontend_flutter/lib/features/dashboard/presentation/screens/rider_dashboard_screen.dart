@@ -4,6 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../auth/providers/providers.dart';
 import '../../../wallet/providers/wallet_providers.dart';
 import '../../../payment/providers/payment_providers.dart';
 
@@ -126,6 +127,7 @@ class _RiderDashboardScreenState extends ConsumerState<RiderDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final balanceAsync = ref.watch(walletBalanceNotifierProvider);
+    final userProfileAsync = ref.watch(userProfileNotifierProvider);
 
     if (_isScanning) {
       return Scaffold(
@@ -188,10 +190,21 @@ class _RiderDashboardScreenState extends ConsumerState<RiderDashboardScreen> {
                     icon: const Icon(Icons.notifications_outlined, color: Colors.white),
                     onPressed: () {},
                   ),
-                  const CircleAvatar(
+                  CircleAvatar(
                     radius: 20,
                     backgroundColor: AppColors.slate,
-                    child: Icon(Icons.person, color: Colors.white),
+                    child: userProfileAsync.when(
+                      data: (profile) => Text(
+                        profile?.name.substring(0, 1).toUpperCase() ?? 'U',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      ),
+                      loading: () => const Icon(Icons.person, color: Colors.white),
+                      error: (_, __) => const Icon(Icons.person, color: Colors.white),
+                    ),
                   ),
                 ],
               ),
@@ -200,6 +213,7 @@ class _RiderDashboardScreenState extends ConsumerState<RiderDashboardScreen> {
               child: RefreshIndicator(
                 onRefresh: () async {
                   await ref.read(walletBalanceNotifierProvider.notifier).refresh();
+                  await ref.read(userProfileNotifierProvider.notifier).refresh();
                 },
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(20),
@@ -207,12 +221,30 @@ class _RiderDashboardScreenState extends ConsumerState<RiderDashboardScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Greeting
-                      Text(
-                        'GOOD MORNING, MUSA',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                          letterSpacing: 1,
+                      userProfileAsync.when(
+                        data: (profile) => Text(
+                          'GOOD ${_getGreeting()}, ${profile?.name.toUpperCase() ?? 'RIDER'}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        loading: () => Text(
+                          'GOOD ${_getGreeting()}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        error: (_, __) => Text(
+                          'GOOD ${_getGreeting()}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                            letterSpacing: 1,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 20),
@@ -571,6 +603,17 @@ class _RiderDashboardScreenState extends ConsumerState<RiderDashboardScreen> {
         ],
       ),
     );
+  }
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) {
+      return 'MORNING';
+    } else if (hour < 17) {
+      return 'AFTERNOON';
+    } else {
+      return 'EVENING';
+    }
   }
 }
 
