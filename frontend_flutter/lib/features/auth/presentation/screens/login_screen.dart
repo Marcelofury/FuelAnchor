@@ -102,10 +102,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       
       // 4. Parse role from profile
       final roleString = profileData['role'] as String;
-      final role = UserRole.values.firstWhere(
-        (r) => r.name == roleString,
-        orElse: () => UserRole.rider,
-      );
+      final role = UserRole.fromDbName(roleString);
       
       // 5. Set role locally
       ref.read(userRoleNotifierProvider.notifier).setRole(role);

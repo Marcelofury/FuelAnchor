@@ -95,7 +95,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               password: _passwordController.text,
               fullName: _nameController.text,
               phoneNumber: _phoneController.text,
-              role: _selectedRole.name,
+              role: _selectedRole.dbName,
               stellarPublicKey: keypair.accountId,
             );
             
@@ -120,7 +120,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             if (roleData.isNotEmpty) {
               await SupabaseService.createRoleProfile(
                 userId: supabaseUserId,
-                role: _selectedRole.name,
+                role: _selectedRole.dbName,
                 additionalData: roleData,
               );
             }
