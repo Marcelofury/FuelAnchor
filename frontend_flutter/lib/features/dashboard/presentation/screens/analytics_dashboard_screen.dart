@@ -28,7 +28,7 @@ class _AnalyticsDashboardScreenState
     return Scaffold(
       appBar: AppBar(
         title: const Text('Analytics'),
-        backgroundColor: AppColors.primary,
+        backgroundColor: AppColors.navy,
         foregroundColor: Colors.white,
         actions: [
           PopupMenuButton<String>(
@@ -84,14 +84,14 @@ class _AnalyticsDashboardScreenState
           'Total Volume',
           '125,490 FUEL',
           Icons.account_balance_wallet,
-          AppColors.primary,
+          AppColors.navy,
           '+12.5%',
         ),
         _buildStatCard(
           'Transactions',
           '1,247',
           Icons.receipt_long,
-          AppColors.accent,
+          AppColors.electricGreen,
           '+8.3%',
         ),
         _buildStatCard(
@@ -210,7 +210,7 @@ class _AnalyticsDashboardScreenState
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.primary,
+                  color: AppColors.navy,
                 ),
               ),
               Icon(Icons.show_chart, color: Colors.grey[400]),
@@ -230,7 +230,7 @@ class _AnalyticsDashboardScreenState
                   width: 30,
                   height: heights[index % heights.length].toDouble(),
                   decoration: BoxDecoration(
-                    color: AppColors.accent.withOpacity(0.7),
+                    color: AppColors.electricGreen.withOpacity(0.7),
                     borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(4),
                     ),
@@ -265,7 +265,7 @@ class _AnalyticsDashboardScreenState
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
-            color: AppColors.primary,
+            color: AppColors.navy,
           ),
         ),
         const SizedBox(height: 16),
@@ -332,7 +332,7 @@ class _AnalyticsDashboardScreenState
                 ),
               ),
               const SizedBox(height: 12),
-              _buildMetricRow('FUEL Tokens', '70%', 0.7, color: AppColors.primary),
+              _buildMetricRow('FUEL Tokens', '70%', 0.7, color: AppColors.navy),
               _buildMetricRow('M-Pesa', '20%', 0.2, color: Colors.green),
               _buildMetricRow('MTN MoMo', '10%', 0.1, color: Colors.yellow[700]!),
             ],
@@ -376,7 +376,7 @@ class _AnalyticsDashboardScreenState
               value: progress,
               backgroundColor: Colors.grey[200],
               valueColor: AlwaysStoppedAnimation<Color>(
-                color ?? AppColors.accent,
+                color ?? AppColors.electricGreen,
               ),
               minHeight: 6,
             ),
