@@ -163,6 +163,9 @@ class SupabaseService {
       case 'fleet_driver':
         await client.from('fleet_driver_profiles').insert(data);
         break;
+      case 'fleet_manager':
+        await client.from('fleet_manager_profiles').insert(data);
+        break;
       case 'merchant':
         await client.from('merchant_profiles').insert(data);
         break;
